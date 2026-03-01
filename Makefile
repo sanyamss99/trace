@@ -1,20 +1,21 @@
-.PHONY: install dev test lint check
+.PHONY: install dev test lint format check
 
 install:
-	uv sync --all-extras
+	uv sync --all-packages
 
 dev:
-	uv run uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000
+	cd api && uv run uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
 
 test:
-	uv run pytest -x --tb=short
+	cd api && uv run pytest -x --tb=short
+	cd sdk && uv run pytest -x --tb=short
 
 lint:
-	uv run ruff check src/ tests/
-	uv run ruff format --check src/ tests/
+	uv run ruff check sdk/ api/
+	uv run ruff format --check sdk/ api/
 
 format:
-	uv run ruff check --fix src/ tests/
-	uv run ruff format src/ tests/
+	uv run ruff check --fix sdk/ api/
+	uv run ruff format sdk/ api/
 
 check: lint test

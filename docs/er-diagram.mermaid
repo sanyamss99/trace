@@ -1,0 +1,114 @@
+erDiagram
+    organizations {
+        UUID id PK
+        TEXT name
+        TEXT plan "hobby | team | enterprise"
+        TIMESTAMPTZ created_at
+    }
+
+    users {
+        UUID id PK
+        TEXT email UK
+        TIMESTAMPTZ created_at
+    }
+
+    org_members {
+        UUID org_id PK,FK
+        UUID user_id PK,FK
+        TEXT role "owner | admin | member"
+        TIMESTAMPTZ joined_at
+    }
+
+    api_keys {
+        UUID id PK
+        UUID org_id FK
+        UUID created_by FK
+        TEXT key_hash UK
+        TEXT name
+        TIMESTAMPTZ created_at
+        TIMESTAMPTZ last_used_at
+        TIMESTAMPTZ revoked_at
+    }
+
+    traces {
+        UUID id PK
+        UUID org_id FK
+        TEXT function_name
+        TEXT environment "production | staging | dev"
+        TIMESTAMPTZ started_at
+        TIMESTAMPTZ ended_at
+        INTEGER duration_ms "generated"
+        INTEGER total_tokens
+        NUMERIC total_cost_usd
+        TEXT status "success | error | anomaly"
+        JSONB tags
+    }
+
+    spans {
+        UUID id PK
+        UUID trace_id FK
+        UUID parent_span_id FK "nullable self-ref"
+        UUID org_id FK
+        TEXT function_name
+        TEXT span_type "llm | retrieval | custom"
+        TEXT model
+        TIMESTAMPTZ started_at
+        TIMESTAMPTZ ended_at
+        INTEGER duration_ms "generated"
+        TEXT prompt_text
+        INTEGER prompt_tokens
+        TEXT completion_text
+        INTEGER completion_tokens
+        JSONB completion_logprobs
+        NUMERIC cost_usd
+        JSONB model_params
+        JSONB input_locals
+        TEXT error
+        JSONB metadata
+    }
+
+    span_segments {
+        UUID id PK
+        UUID span_id FK
+        TEXT segment_name
+        TEXT segment_type "system | retrieval | query"
+        TEXT segment_text
+        INTEGER position_start
+        INTEGER position_end
+        INTEGER retrieval_rank
+        NUMERIC influence_score
+        NUMERIC utilization_score
+        TEXT attribution_method
+    }
+
+    baselines {
+        UUID id PK
+        UUID org_id FK
+        TEXT function_name
+        TIMESTAMPTZ created_at
+        INTEGER sample_count
+        NUMERIC avg_output_length
+        VECTOR output_embedding_centroid "pgvector 1536"
+        JSONB attribution_pattern
+    }
+
+    usage_events {
+        UUID id PK
+        UUID org_id FK
+        TEXT event_type "span_ingested | attribution"
+        TIMESTAMPTZ occurred_at
+        INTEGER quantity
+    }
+
+    %% Relationships
+    organizations ||--o{ org_members : "has members"
+    users ||--o{ org_members : "belongs to orgs"
+    organizations ||--o{ api_keys : "owns"
+    users ||--o{ api_keys : "creates"
+    organizations ||--o{ traces : "owns"
+    traces ||--o{ spans : "contains"
+    organizations ||--o{ spans : "owns"
+    spans ||--o{ spans : "parent-child"
+    spans ||--o{ span_segments : "has segments"
+    organizations ||--o{ baselines : "owns"
+    organizations ||--o{ usage_events : "metered"

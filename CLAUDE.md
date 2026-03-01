@@ -16,37 +16,40 @@ Trace is a real-time causal debugger for LLM applications. It answers the produc
 
 ## Directory Structure
 
+Monorepo with three independently deployable packages:
+
 ```
 trace/
-├── CLAUDE.md                 ← You are here
-├── pyproject.toml
-├── Makefile
-├── .env.example
-├── src/
-│   ├── sdk/                  ← Python SDK (pip-installable library)
+├── CLAUDE.md
+├── pyproject.toml            ← uv workspace root
+├── Makefile                  ← Orchestrates all packages
+├── sdk/                      ← Python SDK — published to PyPI as "usetrace"
+│   ├── pyproject.toml        ← Minimal deps: pydantic, httpx
+│   ├── src/usetrace/
 │   │   ├── decorators/       ← @trace, @monitor, etc.
 │   │   ├── capture/          ← Input/output capture logic
 │   │   ├── transport/        ← Sending trace data to backend
 │   │   └── models/           ← Pydantic models for trace payloads
-│   ├── api/                  ← FastAPI backend
+│   └── tests/
+├── api/                      ← FastAPI backend — deployed as Docker container
+│   ├── pyproject.toml        ← Depends on usetrace + FastAPI, SQLAlchemy, etc.
+│   ├── .env.example
+│   ├── src/api/
 │   │   ├── routes/           ← API endpoints (one file per resource)
 │   │   ├── schemas/          ← Request/response Pydantic schemas
 │   │   ├── services/         ← Business logic layer
 │   │   ├── dal/              ← Data access layer (DB queries)
 │   │   └── deps.py           ← FastAPI dependencies (auth, DB session)
-│   └── frontend/             ← React dashboard
-│       ├── src/
-│       │   ├── components/   ← Reusable UI components
-│       │   ├── pages/        ← Route-level page components
-│       │   ├── hooks/        ← Custom React hooks
-│       │   ├── api/          ← API client functions
-│       │   └── utils/        ← Helpers and formatters
-│       └── package.json
-├── tests/                    ← Mirrors src/ structure
-│   ├── sdk/
-│   ├── api/
-│   └── conftest.py           ← Shared fixtures
-└── docs/                     ← User-facing documentation
+│   └── tests/
+├── frontend/                 ← React dashboard — deployed to Vercel or Nginx
+│   ├── package.json
+│   └── src/
+│       ├── components/       ← Reusable UI components
+│       ├── pages/            ← Route-level page components
+│       ├── hooks/            ← Custom React hooks
+│       ├── api/              ← API client functions
+│       └── utils/            ← Helpers and formatters
+└── docs/                     ← Specs and design documents
 ```
 
 ---
@@ -58,7 +61,7 @@ trace/
 3. **Never create new top-level directories.** Work within the existing structure.
 4. **Always run `make check` (ruff + pytest) before considering any task complete.**
 5. **When unsure between two approaches, stop and ask. Do not guess.**
-6. **Never use `print()`.** Use the project logger: `from src.api.logger import logger`.
+6. **Never use `print()`.** Use the project logger: `from api.logger import logger`.
 
 ---
 
@@ -73,7 +76,7 @@ trace/
 - **Snake_case** for functions, variables, files. **PascalCase** for classes.
 - **No star imports.** Always import explicitly.
 - **Keep functions short.** If a function exceeds ~40 lines, break it up.
-- **Error handling:** Raise custom exceptions from `src/api/exceptions.py`. Never catch bare `Exception` unless re-raising.
+- **Error handling:** Raise custom exceptions from `api/src/api/exceptions.py`. Never catch bare `Exception` unless re-raising.
 
 ```python
 # Good
@@ -119,25 +122,25 @@ def get_trace_by_id(trace_id):
 
 ### Add a new API endpoint
 
-1. Create/edit route handler in `src/api/routes/{resource}.py`
-2. Define request/response schemas in `src/api/schemas/{resource}.py`
-3. Implement business logic in `src/api/services/{resource}.py`
-4. Add DB queries in `src/api/dal/{resource}.py` if needed
-5. Register the route in `src/api/routes/__init__.py`
-6. Write tests in `tests/api/test_{resource}.py`
+1. Create/edit route handler in `api/src/api/routes/{resource}.py`
+2. Define request/response schemas in `api/src/api/schemas/{resource}.py`
+3. Implement business logic in `api/src/api/services/{resource}.py`
+4. Add DB queries in `api/src/api/dal/{resource}.py` if needed
+5. Register the route in `api/src/api/routes/__init__.py`
+6. Write tests in `api/tests/api/test_{resource}.py`
 
 ### Add a new SDK decorator
 
-1. Follow the pattern in `src/sdk/decorators/trace.py`
+1. Follow the pattern in `sdk/src/usetrace/decorators/trace.py`
 2. Each decorator must: capture inputs, capture outputs, record timing, and send a TraceEvent
-3. Add tests in `tests/sdk/test_{decorator_name}.py`
-4. Export the decorator from `src/sdk/__init__.py`
+3. Add tests in `sdk/tests/test_{decorator_name}.py`
+4. Export the decorator from `sdk/src/usetrace/__init__.py`
 
 ### Add a new frontend page
 
-1. Create the page component in `src/frontend/src/pages/`
+1. Create the page component in `frontend/src/pages/`
 2. Add the route in the router config
-3. Create any needed API client functions in `src/frontend/src/api/`
+3. Create any needed API client functions in `frontend/src/api/`
 4. Create custom hooks if the page has complex state
 
 ---
@@ -145,10 +148,12 @@ def get_trace_by_id(trace_id):
 ## Testing
 
 - **Framework:** pytest + pytest-asyncio
-- **Run all tests:** `make test` or `pytest -x --tb=short`
-- **Run specific tests:** `pytest tests/sdk/test_decorators.py -v`
+- **Run all tests:** `make test`
+- **Run API tests only:** `cd api && uv run pytest -x --tb=short`
+- **Run SDK tests only:** `cd sdk && uv run pytest -x --tb=short`
+- **Run specific tests:** `cd api && uv run pytest tests/api/test_health.py -v`
 - **Every new module must have tests.** No exceptions.
-- **Use fixtures from `tests/conftest.py`** — check what's available before creating new ones.
+- **Use fixtures from each package's `tests/conftest.py`** — check what's available before creating new ones.
 - **Test naming:** `test_{what_it_does}` e.g., `test_trace_decorator_captures_llm_output`
 - **Minimum:** test the happy path + one error case per public function.
 
@@ -158,17 +163,17 @@ def get_trace_by_id(trace_id):
 
 ```bash
 # Clone and setup
-cp .env.example .env
-make install          # Creates venv, installs deps
+cp api/.env.example api/.env
+make install          # Creates venv, installs all workspace deps
 
 # Run locally
-make dev              # Starts API + frontend in dev mode
+make dev              # Starts API server on port 8000
 
 # Check everything
-make check            # Runs ruff + pytest
+make check            # Runs ruff + pytest across all packages
 ```
 
-**Required env vars** (see `.env.example` for full list):
+**Required env vars** (see `api/.env.example` for full list):
 - `DATABASE_URL` — SQLite for local, Postgres connection string for prod
 - `TRACE_API_KEY` — API key for authenticated endpoints
 - `LOG_LEVEL` — DEBUG in dev, INFO in prod

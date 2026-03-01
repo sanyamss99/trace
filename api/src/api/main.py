@@ -1,9 +1,9 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from src.api.exceptions import TraceAppError
-from src.api.logger import logger
-from src.api.routes import api_router
+from api.exceptions import TraceAppError
+from api.logger import logger
+from api.routes import api_router
 
 
 def create_app() -> FastAPI:

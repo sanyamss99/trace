@@ -37,9 +37,9 @@ htmlcov/
 .ruff_cache/
 
 # Node / Frontend
-src/frontend/node_modules/
-src/frontend/dist/
-src/frontend/.next/
+node_modules/
+frontend/dist/
+frontend/.next/
 
 # Claude
 .claude/

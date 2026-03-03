@@ -12,14 +12,20 @@ async def bulk_create_spans(
 ) -> int:
     """Insert multiple spans, skipping duplicates by span ID.
 
+    Uses no_autoflush to prevent premature INSERT during duplicate checks,
+    then flushes all new spans in a single batch.
+
     Returns the number of spans actually inserted.
     """
     inserted = 0
-    for span in spans:
-        existing = await db.execute(select(Span.id).where(Span.id == span.id))
-        if existing.scalar_one_or_none() is None:
-            db.add(span)
-            inserted += 1
+    with db.no_autoflush:
+        for span in spans:
+            existing = await db.execute(select(Span.id).where(Span.id == span.id))
+            if existing.scalar_one_or_none() is None:
+                db.add(span)
+                inserted += 1
+
+    await db.flush()
     return inserted
 
 

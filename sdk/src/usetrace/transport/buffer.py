@@ -19,15 +19,24 @@ class SpanBuffer:
     """Thread-safe, memory-bounded buffer for SpanData objects.
 
     Uses ``queue.SimpleQueue`` for lock-free ingestion. Silently drops
-    spans when the byte ceiling is exceeded.
+    spans when the byte ceiling is exceeded.  Optionally signals a
+    ``flush_event`` when the span count reaches ``flush_threshold``.
     """
 
-    def __init__(self, max_bytes: int = DEFAULT_MAX_BYTES) -> None:
+    def __init__(
+        self,
+        max_bytes: int = DEFAULT_MAX_BYTES,
+        flush_event: threading.Event | None = None,
+        flush_threshold: int = 0,
+    ) -> None:
         self._queue: SimpleQueue[SpanData] = SimpleQueue()
         self._max_bytes = max_bytes
         self._pending_bytes = 0
         self._dropped_spans = 0
         self._lock = threading.Lock()
+        self._flush_event = flush_event
+        self._flush_threshold = flush_threshold
+        self._span_count = 0
 
     @property
     def pending_bytes(self) -> int:
@@ -51,7 +60,13 @@ class SpanBuffer:
                 logger.debug("Span dropped — buffer at %d bytes", self._pending_bytes)
                 return False
             self._pending_bytes += span_bytes
+            self._span_count += 1
+            should_signal = self._flush_threshold > 0 and self._span_count >= self._flush_threshold
+            if should_signal:
+                self._span_count = 0
         self._queue.put(span)
+        if should_signal and self._flush_event is not None:
+            self._flush_event.set()
         return True
 
     def drain(self, max_items: int) -> list[SpanData]:
@@ -82,4 +97,5 @@ class SpanBuffer:
                 break
         with self._lock:
             self._pending_bytes = 0
+            self._span_count = 0
         return items

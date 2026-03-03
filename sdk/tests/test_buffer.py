@@ -1,5 +1,7 @@
 """Tests for usetrace.transport.buffer."""
 
+import threading
+
 from usetrace.models.span import SpanData
 from usetrace.transport.buffer import SpanBuffer
 
@@ -62,3 +64,23 @@ def test_empty_drain_returns_empty_list() -> None:
     buf = SpanBuffer()
     assert buf.drain(10) == []
     assert buf.drain_all() == []
+
+
+def test_flush_event_triggered_at_threshold() -> None:
+    """The flush event should be set when span count reaches the threshold."""
+    event = threading.Event()
+    buf = SpanBuffer(flush_event=event, flush_threshold=3)
+    buf.put(_make_span(span_id="s0"))
+    buf.put(_make_span(span_id="s1"))
+    assert not event.is_set()
+    buf.put(_make_span(span_id="s2"))  # 3rd span hits threshold
+    assert event.is_set()
+
+
+def test_flush_event_not_triggered_below_threshold() -> None:
+    """The flush event should not fire before threshold is reached."""
+    event = threading.Event()
+    buf = SpanBuffer(flush_event=event, flush_threshold=10)
+    for i in range(9):
+        buf.put(_make_span(span_id=f"s{i}"))
+    assert not event.is_set()

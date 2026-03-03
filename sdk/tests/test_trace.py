@@ -4,8 +4,16 @@ from types import SimpleNamespace
 
 import pytest
 
+from usetrace.decorators.context import _span_stack_var, _trace_id_var
 from usetrace.decorators.trace import Trace
 from usetrace.models.span import SpanData
+
+
+@pytest.fixture(autouse=True)
+def _reset_contextvars() -> None:
+    """Ensure each test starts with clean context."""
+    _trace_id_var.set(None)
+    _span_stack_var.set(())
 
 
 @pytest.fixture()

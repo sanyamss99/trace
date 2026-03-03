@@ -1,8 +1,17 @@
 """Tests for usetrace.decorators.context."""
 
-import threading
+import asyncio
 
-from usetrace.decorators.context import TraceContext
+import pytest
+
+from usetrace.decorators.context import TraceContext, _span_stack_var, _trace_id_var
+
+
+@pytest.fixture(autouse=True)
+def _reset_contextvars() -> None:
+    """Ensure each test starts with clean context."""
+    _trace_id_var.set(None)
+    _span_stack_var.set(())
 
 
 def test_starts_as_root() -> None:
@@ -51,31 +60,59 @@ def test_trace_id_property() -> None:
     assert ctx.trace_id == "abc-123"
 
 
-def test_thread_isolation() -> None:
-    """Each thread should have its own independent span stack."""
+@pytest.mark.asyncio()
+async def test_asyncio_task_isolation() -> None:
+    """Each asyncio task should get its own independent span stack."""
     ctx = TraceContext()
     ctx.push_span("main-span")
     ctx.trace_id = "main-trace"
 
-    child_results: dict[str, object] = {}
+    task_results: dict[str, object] = {}
 
-    def child_thread() -> None:
-        child_results["is_root"] = ctx.is_root()
-        child_results["parent_id"] = ctx.current_parent_span_id
-        child_results["trace_id"] = ctx.trace_id
+    async def child_task() -> None:
+        # asyncio.create_task copies the parent's context, but our
+        # immutable tuples mean mutations here don't affect the parent
+        task_results["inherited_parent"] = ctx.current_parent_span_id
         ctx.push_span("child-span")
-        child_results["child_parent_id"] = ctx.current_parent_span_id
+        task_results["child_parent"] = ctx.current_parent_span_id
 
-    t = threading.Thread(target=child_thread)
-    t.start()
-    t.join()
+    await asyncio.create_task(child_task())
 
-    # Child thread should have its own empty stack
-    assert child_results["is_root"] is True
-    assert child_results["parent_id"] is None
-    assert child_results["trace_id"] is None
-    assert child_results["child_parent_id"] == "child-span"
+    # Child inherited the parent's stack (main-span) at creation time
+    assert task_results["inherited_parent"] == "main-span"
+    assert task_results["child_parent"] == "child-span"
 
-    # Main thread should be unaffected
+    # Main context is unaffected by child's push
     assert ctx.current_parent_span_id == "main-span"
     assert ctx.trace_id == "main-trace"
+
+
+@pytest.mark.asyncio()
+async def test_asyncio_gather_isolation() -> None:
+    """Concurrent tasks under asyncio.gather must not corrupt each other."""
+    ctx = TraceContext()
+    ctx.push_span("root")
+
+    results: dict[str, str | None] = {}
+
+    async def task_a() -> None:
+        ctx.push_span("a-span")
+        await asyncio.sleep(0.01)  # yield to let task_b run
+        results["a_parent"] = ctx.current_parent_span_id
+
+    async def task_b() -> None:
+        ctx.push_span("b-span")
+        await asyncio.sleep(0.01)  # yield to let task_a run
+        results["b_parent"] = ctx.current_parent_span_id
+
+    await asyncio.gather(
+        asyncio.create_task(task_a()),
+        asyncio.create_task(task_b()),
+    )
+
+    # Each task sees its own span, not the other's
+    assert results["a_parent"] == "a-span"
+    assert results["b_parent"] == "b-span"
+
+    # Root context unaffected
+    assert ctx.current_parent_span_id == "root"

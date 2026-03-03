@@ -6,6 +6,7 @@ import atexit
 import functools
 import inspect
 import logging
+import threading
 import time
 import uuid
 from collections.abc import Callable
@@ -53,13 +54,27 @@ class Trace:
         flush_interval: float = 5.0,
         batch_size: int = 50,
         max_buffer_bytes: int = 10 * 1024 * 1024,
+        max_string_length: int | None = None,
+        flush_threshold: int | None = None,
     ) -> None:
         self._api_key = api_key
         self._base_url = base_url
         self._environment = environment
         self._enabled = enabled
         self._context = TraceContext()
-        self._buffer = SpanBuffer(max_bytes=max_buffer_bytes)
+        self._max_string_length = max_string_length or max(
+            500, min(50_000, max_buffer_bytes // 1024)
+        )
+
+        # Shared event: buffer signals the worker when span count hits threshold
+        flush_event = threading.Event()
+        resolved_threshold = flush_threshold if flush_threshold is not None else batch_size
+
+        self._buffer = SpanBuffer(
+            max_bytes=max_buffer_bytes,
+            flush_event=flush_event,
+            flush_threshold=resolved_threshold,
+        )
 
         if self._enabled:
             self._worker = FlushWorker(
@@ -68,6 +83,7 @@ class Trace:
                 api_key=self._api_key,
                 flush_interval=flush_interval,
                 batch_size=batch_size,
+                flush_event=flush_event,
             )
             self._worker.start()
             atexit.register(self.shutdown)
@@ -139,7 +155,11 @@ class Trace:
         parent_span_id = self._context.current_parent_span_id
 
         self._context.push_span(span_id)
-        inputs = capture_locals(func, args, kwargs) if capture_input else None
+        inputs = (
+            capture_locals(func, args, kwargs, max_string_length=self._max_string_length)
+            if capture_input
+            else None
+        )
         start = time.perf_counter()
         start_time = datetime.now(UTC)
 
@@ -205,7 +225,11 @@ class Trace:
         parent_span_id = self._context.current_parent_span_id
 
         self._context.push_span(span_id)
-        inputs = capture_locals(func, args, kwargs) if capture_input else None
+        inputs = (
+            capture_locals(func, args, kwargs, max_string_length=self._max_string_length)
+            if capture_input
+            else None
+        )
         start = time.perf_counter()
         start_time = datetime.now(UTC)
 
@@ -289,7 +313,7 @@ class Trace:
                 error_type=error_type,
                 error_message=error_message,
                 inputs=inputs,
-                output=_truncate_value(output) if not llm_fields else None,
+                output=_truncate_value(output, self._max_string_length) if not llm_fields else None,
                 model=model or llm_fields.get("model"),
                 completion_text=llm_fields.get("completion_text"),
                 prompt_tokens=llm_fields.get("prompt_tokens"),

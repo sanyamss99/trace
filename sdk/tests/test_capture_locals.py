@@ -73,3 +73,18 @@ def test_never_raises_on_bad_input() -> None:
 def test_never_raises_on_mismatched_args() -> None:
     result = capture_locals(_sample_func, (1,), {})  # missing required 'b'
     assert result == {}
+
+
+def test_custom_max_string_length() -> None:
+    """Custom max_string_length should override the module default."""
+
+    def func(text: str) -> None:
+        pass
+
+    long_str = "a" * 1000
+    result = capture_locals(func, (long_str,), {}, max_string_length=100)
+    assert len(result["text"]) < 200
+    assert result["text"].endswith("...[truncated]")
+    # With a high limit, it should not be truncated
+    result2 = capture_locals(func, (long_str,), {}, max_string_length=5000)
+    assert result2["text"] == long_str

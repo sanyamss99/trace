@@ -18,6 +18,16 @@ from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
+def _naive_utcnow() -> datetime:
+    """Return current UTC time as a naive datetime (no tzinfo).
+
+    Postgres TIMESTAMP WITHOUT TIME ZONE columns reject timezone-aware
+    datetimes. This helper produces naive UTC values compatible with both
+    SQLite and Postgres.
+    """
+    return datetime.now(UTC).replace(tzinfo=None)
+
+
 class Base(DeclarativeBase):
     """Base class for all ORM models."""
 
@@ -35,7 +45,7 @@ class Organization(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
     name: Mapped[str] = mapped_column(Text, nullable=False)
     plan: Mapped[str] = mapped_column(Text, default="hobby")
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_naive_utcnow)
 
     # Relationships
     members: Mapped[list["OrgMember"]] = relationship(back_populates="organization")
@@ -56,7 +66,7 @@ class User(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
     email: Mapped[str] = mapped_column(Text, unique=True, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_naive_utcnow)
 
     # Relationships
     memberships: Mapped[list["OrgMember"]] = relationship(back_populates="user")
@@ -78,7 +88,7 @@ class OrgMember(Base):
     )
     user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), primary_key=True)
     role: Mapped[str] = mapped_column(Text, nullable=False, default="member")
-    joined_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
+    joined_at: Mapped[datetime] = mapped_column(DateTime, default=_naive_utcnow)
 
     # Relationships
     organization: Mapped["Organization"] = relationship(back_populates="members")
@@ -102,7 +112,7 @@ class ApiKey(Base):
     created_by: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False)
     key_hash: Mapped[str] = mapped_column(Text, unique=True, nullable=False)
     name: Mapped[str | None] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_naive_utcnow)
     last_used_at: Mapped[datetime | None] = mapped_column(DateTime)
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime)
 
@@ -166,7 +176,7 @@ class Span(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
     trace_id: Mapped[str] = mapped_column(String(36), ForeignKey("traces.id"), nullable=False)
-    parent_span_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("spans.id"))
+    parent_span_id: Mapped[str | None] = mapped_column(String(36))
     org_id: Mapped[str] = mapped_column(String(36), ForeignKey("organizations.id"), nullable=False)
     function_name: Mapped[str] = mapped_column(Text, nullable=False)
     span_type: Mapped[str] = mapped_column(Text, default="llm")
@@ -186,10 +196,6 @@ class Span(Base):
 
     # Relationships
     trace: Mapped["Trace"] = relationship(back_populates="spans")
-    parent_span: Mapped["Span | None"] = relationship(
-        remote_side=[id], back_populates="child_spans"
-    )
-    child_spans: Mapped[list["Span"]] = relationship(back_populates="parent_span")
     segments: Mapped[list["SpanSegment"]] = relationship(back_populates="span")
 
     @hybrid_property
@@ -250,7 +256,7 @@ class UsageEvent(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
     org_id: Mapped[str] = mapped_column(String(36), ForeignKey("organizations.id"), nullable=False)
     event_type: Mapped[str] = mapped_column(Text, nullable=False)
-    occurred_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
+    occurred_at: Mapped[datetime] = mapped_column(DateTime, default=_naive_utcnow)
     quantity: Mapped[int] = mapped_column(Integer, default=1)
 
     # Relationships

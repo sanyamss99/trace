@@ -127,6 +127,7 @@ async def process_batch(
                 "Failed to ingest trace group %s (%d spans)",
                 trace_id,
                 len(group_spans),
+                exc_info=True,
             )
             failed += len(group_spans)
 

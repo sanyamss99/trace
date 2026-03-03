@@ -41,7 +41,9 @@ async def verify_api_key(
         raise AuthenticationError()
 
     await db.execute(
-        update(ApiKey).where(ApiKey.id == row.id).values(last_used_at=datetime.now(UTC))
+        update(ApiKey)
+        .where(ApiKey.id == row.id)
+        .values(last_used_at=datetime.now(UTC).replace(tzinfo=None))
     )
 
     return row.org_id

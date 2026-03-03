@@ -67,7 +67,7 @@ async def test_full_insert_chain(db_session: AsyncSession) -> None:
     await db_session.flush()
 
     # Trace
-    now = datetime.now(UTC)
+    now = datetime.now(UTC).replace(tzinfo=None)
     trace = Trace(
         org_id=org.id,
         function_name="answer_question",
@@ -141,7 +141,7 @@ async def test_trace_duration_ms(db_session: AsyncSession) -> None:
     db_session.add(org)
     await db_session.flush()
 
-    now = datetime.now(UTC)
+    now = datetime.now(UTC).replace(tzinfo=None)
     trace = Trace(
         org_id=org.id,
         function_name="slow_fn",
@@ -162,7 +162,7 @@ async def test_span_duration_ms(db_session: AsyncSession) -> None:
     db_session.add(org)
     await db_session.flush()
 
-    now = datetime.now(UTC)
+    now = datetime.now(UTC).replace(tzinfo=None)
     trace = Trace(
         org_id=org.id,
         function_name="fn",
@@ -195,7 +195,7 @@ async def test_span_segment_unique_constraint(db_session: AsyncSession) -> None:
     db_session.add(org)
     await db_session.flush()
 
-    now = datetime.now(UTC)
+    now = datetime.now(UTC).replace(tzinfo=None)
     trace = Trace(
         org_id=org.id,
         function_name="fn",

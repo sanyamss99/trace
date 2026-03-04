@@ -39,9 +39,7 @@ if not logger.handlers:
 
     if settings.is_debug:
         handler.setFormatter(
-            logging.Formatter(
-                "%(asctime)s %(levelname)-8s %(name)s [%(request_id)s] %(message)s"
-            )
+            logging.Formatter("%(asctime)s %(levelname)-8s %(name)s [%(request_id)s] %(message)s")
         )
     else:
         handler.setFormatter(JsonFormatter())

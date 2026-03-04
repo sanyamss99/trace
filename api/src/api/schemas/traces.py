@@ -6,6 +6,23 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 
+class SpanSegmentResponse(BaseModel):
+    """Single segment in API responses."""
+
+    id: str
+    segment_name: str
+    segment_type: str
+    segment_text: str
+    position_start: int | None
+    position_end: int | None
+    retrieval_rank: int | None
+    influence_score: float | None
+    utilization_score: float | None
+    attribution_method: str | None
+
+    model_config = {"from_attributes": True}
+
+
 class SpanResponse(BaseModel):
     """Single span in API responses."""
 
@@ -22,14 +39,23 @@ class SpanResponse(BaseModel):
     prompt_tokens: int | None
     completion_tokens: int | None
     completion_text: str | None
-    completion_logprobs: list[float] | None
+    completion_logprobs: list[dict[str, Any]] | None
     cost_usd: float | None
     input_locals: dict[str, Any] | None
     output: Any | None
     error: str | None
     metadata: dict[str, Any] | None = Field(validation_alias="span_metadata")
+    segments: list[SpanSegmentResponse] = []
 
     model_config = {"from_attributes": True}
+
+
+class AttributionResponse(BaseModel):
+    """Response from GET /spans/:id/attribution."""
+
+    span_id: str
+    method: str
+    segments: list[SpanSegmentResponse]
 
 
 class TraceListItem(BaseModel):
@@ -74,3 +100,35 @@ class TraceDetailResponse(BaseModel):
     spans: list[SpanResponse]
 
     model_config = {"from_attributes": True}
+
+
+class FunctionCostItem(BaseModel):
+    """Cost and usage aggregates for a single function."""
+
+    function_name: str
+    call_count: int
+    total_tokens: int | None
+    total_cost_usd: float | None
+    avg_cost_usd: float | None
+    avg_duration_ms: float | None
+    error_count: int
+
+
+class OverviewStatsResponse(BaseModel):
+    """Dashboard header summary stats."""
+
+    trace_count: int
+    total_tokens: int | None
+    total_cost_usd: float | None
+    avg_duration_ms: float | None
+    error_count: int
+    error_rate: float
+
+
+class TimeSeriesPoint(BaseModel):
+    """Single data point in a time-series."""
+
+    date: str
+    trace_count: int
+    total_cost_usd: float | None
+    error_count: int

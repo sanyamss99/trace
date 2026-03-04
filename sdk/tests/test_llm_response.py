@@ -99,22 +99,32 @@ class TestOpenAIExtraction:
         assert result["completion_tokens"] == 50
 
     def test_extracts_together_logprobs(self) -> None:
-        """Together flat format: logprobs.token_logprobs (parallel array)."""
-        logprobs = SimpleNamespace(token_logprobs=[-0.1, -0.5, -0.3])
+        """Together flat format: logprobs.token_logprobs with tokens array."""
+        logprobs = SimpleNamespace(
+            token_logprobs=[-0.1, -0.5, -0.3],
+            tokens=["Hello", " world", "!"],
+        )
         resp = _make_openai_response(logprobs=logprobs)
         result = extract_llm_response(resp)
-        assert result["completion_logprobs"] == [-0.1, -0.5, -0.3]
+        assert result["completion_logprobs"] == [
+            {"token": "Hello", "logprob": -0.1},
+            {"token": " world", "logprob": -0.5},
+            {"token": "!", "logprob": -0.3},
+        ]
 
     def test_extracts_openai_new_format_logprobs(self) -> None:
-        """OpenAI newer format: logprobs.content[].logprob."""
+        """OpenAI newer format: logprobs.content[].{token, logprob}."""
         content_logprobs = [
-            SimpleNamespace(logprob=-0.2),
-            SimpleNamespace(logprob=-0.8),
+            SimpleNamespace(token="Hi", logprob=-0.2),
+            SimpleNamespace(token="!", logprob=-0.8),
         ]
         logprobs = SimpleNamespace(token_logprobs=None, content=content_logprobs)
         resp = _make_openai_response(logprobs=logprobs)
         result = extract_llm_response(resp)
-        assert result["completion_logprobs"] == [-0.2, -0.8]
+        assert result["completion_logprobs"] == [
+            {"token": "Hi", "logprob": -0.2},
+            {"token": "!", "logprob": -0.8},
+        ]
 
     def test_handles_missing_usage(self) -> None:
         choice = SimpleNamespace(message=SimpleNamespace(content="hi"), logprobs=None)
@@ -189,7 +199,10 @@ class TestGeminiExtraction:
         logprobs_result = SimpleNamespace(chosen_candidates=chosen)
         resp = _make_gemini_response(logprobs_result=logprobs_result)
         result = extract_llm_response(resp)
-        assert result["completion_logprobs"] == [-0.1, -0.05]
+        assert result["completion_logprobs"] == [
+            {"token": "Hello", "logprob": -0.1},
+            {"token": "!", "logprob": -0.05},
+        ]
 
 
 # ---------------------------------------------------------------------------
@@ -216,7 +229,10 @@ class TestOllamaExtraction:
         ]
         resp = _make_ollama_response(logprobs=logprobs)
         result = extract_llm_response(resp)
-        assert result["completion_logprobs"] == [-0.3, -0.1]
+        assert result["completion_logprobs"] == [
+            {"token": "Hi", "logprob": -0.3},
+            {"token": "!", "logprob": -0.1},
+        ]
 
 
 # ---------------------------------------------------------------------------

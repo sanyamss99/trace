@@ -13,6 +13,7 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any, TypeVar
 
+from usetrace.capture.llm_prompt import extract_llm_prompt
 from usetrace.capture.llm_response import extract_llm_response
 from usetrace.capture.locals import _truncate_value, capture_locals
 from usetrace.decorators.context import TraceContext
@@ -179,6 +180,8 @@ class Trace:
                 output=result if capture_output else None,
                 model=model,
                 tags=tags,
+                call_args=args,
+                call_kwargs=kwargs,
             )
             return result
         except Exception as exc:
@@ -198,6 +201,8 @@ class Trace:
                 tags=tags,
                 error_type=type(exc).__name__,
                 error_message=str(exc),
+                call_args=args,
+                call_kwargs=kwargs,
             )
             raise
         finally:
@@ -249,6 +254,8 @@ class Trace:
                 output=result if capture_output else None,
                 model=model,
                 tags=tags,
+                call_args=args,
+                call_kwargs=kwargs,
             )
             return result
         except Exception as exc:
@@ -268,6 +275,8 @@ class Trace:
                 tags=tags,
                 error_type=type(exc).__name__,
                 error_message=str(exc),
+                call_args=args,
+                call_kwargs=kwargs,
             )
             raise
         finally:
@@ -292,12 +301,18 @@ class Trace:
         tags: dict[str, str] | None,
         error_type: str | None = None,
         error_message: str | None = None,
+        call_args: tuple[Any, ...] | None = None,
+        call_kwargs: dict[str, Any] | None = None,
     ) -> None:
         """Build a SpanData and enqueue it in the buffer."""
         try:
             llm_fields: dict[str, Any] = {}
             if span_type == "llm" and output is not None:
                 llm_fields = extract_llm_response(output)
+
+            prompt_text: str | None = None
+            if span_type == "llm" and call_args is not None and call_kwargs is not None:
+                prompt_text = extract_llm_prompt(call_args, call_kwargs)
 
             span = SpanData(
                 trace_id=trace_id,
@@ -319,6 +334,7 @@ class Trace:
                 prompt_tokens=llm_fields.get("prompt_tokens"),
                 completion_tokens=llm_fields.get("completion_tokens"),
                 completion_logprobs=llm_fields.get("completion_logprobs"),
+                prompt_text=prompt_text,
                 environment=self._environment,
                 tags=tags,
             )

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import base64
 import json
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import Row, and_, case, func, or_, select
@@ -15,6 +15,19 @@ from api.models import Span, Trace
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
+
+
+def _to_naive_utc(dt: datetime | None) -> datetime | None:
+    """Convert a timezone-aware datetime to a naive UTC datetime.
+
+    The DB uses TIMESTAMP WITHOUT TIME ZONE and stores naive UTC values.
+    Query parameters must match — asyncpg rejects mixing aware and naive.
+    """
+    if dt is None:
+        return None
+    if dt.tzinfo is not None:
+        dt = dt.astimezone(UTC).replace(tzinfo=None)
+    return dt
 
 
 # ---------------------------------------------------------------------------
@@ -160,9 +173,9 @@ async def list_traces(
     if status:
         query = query.where(Trace.status == status)
     if started_after:
-        query = query.where(Trace.started_at >= started_after)
+        query = query.where(Trace.started_at >= _to_naive_utc(started_after))
     if started_before:
-        query = query.where(Trace.started_at <= started_before)
+        query = query.where(Trace.started_at <= _to_naive_utc(started_before))
 
     # Apply keyset cursor condition
     if cursor:
@@ -231,9 +244,9 @@ async def cost_by_function(
     )
 
     if started_after:
-        query = query.where(Trace.started_at >= started_after)
+        query = query.where(Trace.started_at >= _to_naive_utc(started_after))
     if started_before:
-        query = query.where(Trace.started_at <= started_before)
+        query = query.where(Trace.started_at <= _to_naive_utc(started_before))
     if environment:
         query = query.where(Trace.environment == environment)
 
@@ -265,9 +278,9 @@ async def overview_stats(
     ).where(Trace.org_id == org_id)
 
     if started_after:
-        query = query.where(Trace.started_at >= started_after)
+        query = query.where(Trace.started_at >= _to_naive_utc(started_after))
     if started_before:
-        query = query.where(Trace.started_at <= started_before)
+        query = query.where(Trace.started_at <= _to_naive_utc(started_before))
     if environment:
         query = query.where(Trace.environment == environment)
 
@@ -302,9 +315,9 @@ async def traces_over_time(
     )
 
     if started_after:
-        query = query.where(Trace.started_at >= started_after)
+        query = query.where(Trace.started_at >= _to_naive_utc(started_after))
     if started_before:
-        query = query.where(Trace.started_at <= started_before)
+        query = query.where(Trace.started_at <= _to_naive_utc(started_before))
     if environment:
         query = query.where(Trace.environment == environment)
 

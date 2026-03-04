@@ -1,0 +1,131 @@
+@import "tailwindcss";
+
+/* ── Light theme (default) ── */
+:root {
+  --raw-surface-primary: #f8f9fb;
+  --raw-surface-secondary: #ffffff;
+  --raw-surface-tertiary: #f0f1f5;
+  --raw-border: #d4d6de;
+  --raw-border-focus: #b0b3c0;
+
+  --raw-text-primary: #111318;
+  --raw-text-secondary: #4b5063;
+  --raw-text-muted: #8b90a0;
+
+  --raw-accent: #4f46e5;
+  --raw-accent-subtle: #4f46e520;
+  --raw-success: #059669;
+  --raw-warning: #d97706;
+  --raw-error: #dc2626;
+  --raw-error-subtle: #dc262615;
+
+  /* RGB variants for rgba() construction in JS */
+  --raw-accent-rgb: 79, 70, 229;
+  --raw-warning-rgb: 217, 119, 6;
+  --raw-segment-muted-rgb: 139, 144, 160;
+
+  /* Chart tokens */
+  --raw-chart-tick: #8b90a0;
+  --raw-chart-tooltip-bg: #ffffff;
+  --raw-chart-tooltip-border: #d4d6de;
+  --raw-chart-tooltip-text: #111318;
+
+  /* Logprob text tokens */
+  --raw-logprob-text-confident: #065f46;
+  --raw-logprob-text-medium: #92400e;
+  --raw-logprob-text-uncertain: #991b1b;
+
+  /* Heatmap confident token bg (visible green tint) */
+  --raw-heatmap-confident-bg: rgba(5, 150, 105, 0.12);
+  --raw-heatmap-confident-rgb: 5, 150, 105;
+
+  /* Influence tokens */
+  --raw-influence-low: #8b90a0;
+  --raw-influence-mid: #4b5063;
+  --raw-influence-high-label: #6366f1;
+
+  /* Segment highlight backgrounds — cool→warm spectrum */
+  --raw-segment-bg-none: #eaeaf2;
+  --raw-segment-bg-cool: #dbeafe;
+  --raw-segment-bg-mid: #dcfce7;
+  --raw-segment-bg-warm: #fee2e2;
+  --raw-segment-bg-hover-none: #dddee8;
+  --raw-segment-border-cool: #3b82f6;
+  --raw-segment-border-warm: #ef4444;
+}
+
+/* ── Dark theme ── */
+[data-theme="dark"] {
+  --raw-surface-primary: #0a0b10;
+  --raw-surface-secondary: #12131a;
+  --raw-surface-tertiary: #1a1c26;
+  --raw-border: #2a2d3a;
+  --raw-border-focus: #454966;
+
+  --raw-text-primary: #e8eaf0;
+  --raw-text-secondary: #9499ad;
+  --raw-text-muted: #5c6180;
+
+  --raw-accent: #818cf8;
+  --raw-accent-subtle: #818cf820;
+  --raw-success: #34d399;
+  --raw-warning: #fbbf24;
+  --raw-error: #f87171;
+  --raw-error-subtle: #f8717115;
+
+  /* RGB variants */
+  --raw-accent-rgb: 129, 140, 248;
+  --raw-warning-rgb: 251, 191, 36;
+  --raw-segment-muted-rgb: 92, 97, 128;
+
+  /* Chart tokens */
+  --raw-chart-tick: #5c6180;
+  --raw-chart-tooltip-bg: #12131a;
+  --raw-chart-tooltip-border: #2a2d3a;
+  --raw-chart-tooltip-text: #e8eaf0;
+
+  /* Logprob text tokens */
+  --raw-logprob-text-confident: #6ee7b7;
+  --raw-logprob-text-medium: #fbbf24;
+  --raw-logprob-text-uncertain: #fca5a5;
+
+  /* Heatmap confident token bg (visible green tint) */
+  --raw-heatmap-confident-bg: rgba(52, 211, 153, 0.15);
+  --raw-heatmap-confident-rgb: 52, 211, 153;
+
+  /* Influence tokens */
+  --raw-influence-low: #5c6180;
+  --raw-influence-mid: #9499ad;
+  --raw-influence-high-label: #a5b4fc;
+
+  /* Segment highlight backgrounds — cool→warm spectrum */
+  --raw-segment-bg-none: #181a28;
+  --raw-segment-bg-cool: #172554;
+  --raw-segment-bg-mid: #14532d;
+  --raw-segment-bg-warm: #541414;
+  --raw-segment-bg-hover-none: #1e2038;
+  --raw-segment-border-cool: #60a5fa;
+  --raw-segment-border-warm: #f87171;
+}
+
+@theme {
+  --color-surface-primary: var(--raw-surface-primary);
+  --color-surface-secondary: var(--raw-surface-secondary);
+  --color-surface-tertiary: var(--raw-surface-tertiary);
+  --color-border: var(--raw-border);
+  --color-border-focus: var(--raw-border-focus);
+
+  --color-text-primary: var(--raw-text-primary);
+  --color-text-secondary: var(--raw-text-secondary);
+  --color-text-muted: var(--raw-text-muted);
+
+  --color-accent: var(--raw-accent);
+  --color-accent-subtle: var(--raw-accent-subtle);
+  --color-success: var(--raw-success);
+  --color-warning: var(--raw-warning);
+  --color-error: var(--raw-error);
+  --color-error-subtle: var(--raw-error-subtle);
+
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}

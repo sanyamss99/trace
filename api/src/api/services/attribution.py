@@ -31,7 +31,8 @@ SEGMENT_QUERY = "query"
 SEGMENT_FEW_SHOT = "few_shot"
 
 # Logprob threshold — tokens with logprob below this are "uncertain"
-_UNCERTAIN_LOGPROB_THRESHOLD = -1.0
+# -0.3 captures moderately uncertain tokens, not just the very uncertain ones
+_UNCERTAIN_LOGPROB_THRESHOLD = -0.3
 
 
 # ---------------------------------------------------------------------------
@@ -338,70 +339,59 @@ def _tokenize(text: str) -> set[str]:
 def compute_utilization(
     chunk_text: str,
     completion_text: str,
-    completion_logprobs: list[dict[str, object]] | list[float],
+    completion_logprobs: list[dict[str, object]] | list[float] | None = None,
 ) -> float:
-    """Compute utilization score for a retrieval chunk.
+    """Compute utilization score for a prompt segment.
 
-    Measures lexical overlap between chunk tokens and "uncertain"
-    completion tokens (logprob < -1.0).
+    Measures what fraction of completion words appear in the segment
+    (pure lexical recall). This answers: "how much of the output came
+    from this segment?"
 
-    Accepts logprobs as either:
-    - New format: list of {"token": str, "logprob": float} dicts
-    - Legacy format: list of floats (falls back to whitespace alignment)
-
-    Returns 0.0 if no uncertain tokens exist or inputs are empty.
+    Returns 0.0 if inputs are empty.
     """
-    if not completion_logprobs or not chunk_text or not completion_text:
-        return 0.0
-
-    uncertain_tokens: set[str] = set()
-
-    if isinstance(completion_logprobs[0], dict):
-        # New format: token strings are available
-        for entry in completion_logprobs:
-            lp = float(entry["logprob"])  # type: ignore[arg-type]
-            if lp < _UNCERTAIN_LOGPROB_THRESHOLD:
-                token = _clean_token(str(entry.get("token", "")))
-                if token:
-                    uncertain_tokens.add(token)
-    else:
-        # Legacy format: align logprobs to whitespace-split words
-        completion_words = completion_text.split()
-        min_len = min(len(completion_words), len(completion_logprobs))
-        for i in range(min_len):
-            if float(completion_logprobs[i]) < _UNCERTAIN_LOGPROB_THRESHOLD:
-                cleaned = _clean_token(completion_words[i])
-                if cleaned:
-                    uncertain_tokens.add(cleaned)
-
-    if not uncertain_tokens:
+    if not chunk_text or not completion_text:
         return 0.0
 
     chunk_tokens = _tokenize(chunk_text)
-    overlap = len(chunk_tokens & uncertain_tokens)
-    return overlap / len(uncertain_tokens)
+    completion_tokens = _tokenize(completion_text)
+
+    if not completion_tokens:
+        return 0.0
+
+    overlap = len(chunk_tokens & completion_tokens)
+    return overlap / len(completion_tokens)
 
 
 def compute_influence(
     chunk_text: str,
     completion_text: str,
-    completion_logprobs: list[dict[str, object]] | list[float],
+    completion_logprobs: list[dict[str, object]] | list[float] | None = None,
 ) -> float:
-    """Compute logprob-weighted influence score for a retrieval chunk.
+    """Compute influence score for a prompt segment.
 
-    Unlike utilization (unweighted overlap count), influence weights each
-    overlapping token by how uncertain it is — a token at logprob -5.0
-    contributes more than one at -1.1.
+    Blends two signals:
+    - Presence (40%): lexical overlap regardless of confidence
+    - Uncertainty-weighted overlap (60%): tokens the model was less sure
+      about count more, answering "did this segment help with the hard parts?"
 
-    Score = sum(|logprob|) for overlapping uncertain tokens
-          / sum(|logprob|) for all uncertain tokens
+    When logprobs are unavailable, falls back to pure lexical overlap.
 
-    Returns 0.0 if no uncertain tokens exist or inputs are empty.
+    Returns 0.0 if inputs are empty.
     """
-    if not completion_logprobs or not chunk_text or not completion_text:
+    if not chunk_text or not completion_text:
         return 0.0
 
     chunk_tokens = _tokenize(chunk_text)
+    completion_tokens = _tokenize(completion_text)
+
+    if not completion_tokens:
+        return 0.0
+
+    # Presence baseline — pure lexical recall
+    presence = len(chunk_tokens & completion_tokens) / len(completion_tokens)
+
+    if not completion_logprobs:
+        return presence
 
     # Build list of (cleaned_token, abs_logprob) for uncertain tokens
     uncertain: list[tuple[str, float]] = []
@@ -424,12 +414,15 @@ def compute_influence(
                     uncertain.append((cleaned, abs(lp)))
 
     if not uncertain:
-        return 0.0
+        # No uncertain tokens — influence is just presence
+        return presence
 
     total_weight = sum(w for _, w in uncertain)
     overlap_weight = sum(w for tok, w in uncertain if tok in chunk_tokens)
+    logprob_score = overlap_weight / total_weight
 
-    return overlap_weight / total_weight
+    # Blend: 40% presence + 60% logprob-weighted
+    return 0.4 * presence + 0.6 * logprob_score
 
 
 # ---------------------------------------------------------------------------
@@ -484,23 +477,23 @@ async def compute_attribution(
     if not detected:
         raise AttributionError(f"No segments detected in span '{span_id}' prompt text.")
 
-    # Compute utilization scores for retrieval segments when logprobs are available
-    has_logprobs = bool(span.completion_logprobs and span.completion_text)
+    # Compute utilization and influence for all segments when completion text is available
+    has_logprobs = bool(span.completion_logprobs)
+    has_completion = bool(span.completion_text)
 
     orm_segments: list[SpanSegment] = []
     for seg in detected:
         utilization: float | None = None
         influence: float | None = None
-        if has_logprobs and seg.segment_type == SEGMENT_RETRIEVAL:
+        if has_completion:
             utilization = compute_utilization(
                 chunk_text=seg.text,
                 completion_text=span.completion_text,
-                completion_logprobs=span.completion_logprobs,
             )
             influence = compute_influence(
                 chunk_text=seg.text,
                 completion_text=span.completion_text,
-                completion_logprobs=span.completion_logprobs,
+                completion_logprobs=span.completion_logprobs if has_logprobs else None,
             )
 
         orm_segments.append(

@@ -5,7 +5,7 @@ from fastapi import APIRouter, Query
 from api.dal import spans as span_dal
 from api.dal import traces as trace_dal
 from api.deps import DbSession, OrgId
-from api.exceptions import NotFoundError
+from api.exceptions import InvalidCursorError, NotFoundError
 from api.schemas.traces import (
     PaginatedTraceListResponse,
     SpanResponse,
@@ -20,22 +20,25 @@ router = APIRouter(prefix="/traces", tags=["traces"])
 async def list_traces(
     db: DbSession,
     org_id: OrgId,
-    page: int = Query(1, ge=1),
-    page_size: int = Query(50, ge=1, le=100),
+    limit: int = Query(50, ge=1, le=100),
+    cursor: str | None = Query(None),
     function_name: str | None = None,
     environment: str | None = None,
     status: str | None = None,
 ) -> PaginatedTraceListResponse:
-    """List traces for the authenticated organization."""
-    rows, total = await trace_dal.list_traces(
-        db,
-        org_id,
-        page=page,
-        page_size=page_size,
-        function_name=function_name,
-        environment=environment,
-        status=status,
-    )
+    """List traces for the authenticated organization (cursor-paginated)."""
+    try:
+        rows, next_cursor = await trace_dal.list_traces(
+            db,
+            org_id,
+            limit=limit,
+            cursor=cursor,
+            function_name=function_name,
+            environment=environment,
+            status=status,
+        )
+    except ValueError as exc:
+        raise InvalidCursorError() from exc
 
     items = []
     for row in rows:
@@ -59,10 +62,8 @@ async def list_traces(
 
     return PaginatedTraceListResponse(
         traces=items,
-        total=total,
-        page=page,
-        page_size=page_size,
-        has_more=(page * page_size) < total,
+        next_cursor=next_cursor,
+        limit=limit,
     )
 
 

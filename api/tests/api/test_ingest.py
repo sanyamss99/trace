@@ -1,10 +1,13 @@
 """Tests for POST /ingest/batch endpoint."""
 
+from datetime import UTC, datetime, timedelta, timezone
+
 from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.models import Span, Trace, UsageEvent
+from api.services.ingest import _to_naive_utc
 
 
 def _make_span_payload(**overrides: object) -> dict:
@@ -173,3 +176,122 @@ async def test_ingest_updates_trace_on_second_batch(
     trace = traces[0]
     # Tokens should be accumulated: (10+5) + (20+10) = 45
     assert trace.total_tokens == 45
+
+
+# ---------------------------------------------------------------------------
+# Timezone conversion tests
+# ---------------------------------------------------------------------------
+
+
+def test_to_naive_utc_aware_utc() -> None:
+    """Aware UTC datetime should strip tzinfo."""
+    dt = datetime(2026, 3, 1, 12, 0, 0, tzinfo=UTC)
+    result = _to_naive_utc(dt)
+    assert result == datetime(2026, 3, 1, 12, 0, 0)
+    assert result.tzinfo is None
+
+
+def test_to_naive_utc_aware_non_utc() -> None:
+    """Aware non-UTC datetime should convert to UTC then strip."""
+    ist = timezone(timedelta(hours=5, minutes=30))
+    dt = datetime(2026, 3, 1, 12, 0, 0, tzinfo=ist)
+    result = _to_naive_utc(dt)
+    # 12:00 IST = 06:30 UTC
+    assert result == datetime(2026, 3, 1, 6, 30, 0)
+    assert result.tzinfo is None
+
+
+def test_to_naive_utc_naive() -> None:
+    """Naive datetime should be returned as-is (assumed UTC)."""
+    dt = datetime(2026, 3, 1, 12, 0, 0)
+    result = _to_naive_utc(dt)
+    assert result == datetime(2026, 3, 1, 12, 0, 0)
+    assert result.tzinfo is None
+
+
+# ---------------------------------------------------------------------------
+# Edge case and hardening tests
+# ---------------------------------------------------------------------------
+
+
+async def test_ingest_all_null_tokens(
+    client: AsyncClient,
+    create_api_key: tuple[str, str],
+    db_session: AsyncSession,
+) -> None:
+    """Spans with no token counts should produce a trace with total_tokens=None."""
+    raw_key, _ = create_api_key
+    payload = [
+        _make_span_payload(
+            span_id="no_tokens",
+            prompt_tokens=None,
+            completion_tokens=None,
+        )
+    ]
+    response = await client.post("/ingest/batch", json=payload, headers={"X-Trace-Key": raw_key})
+    assert response.json()["accepted"] == 1
+
+    traces = (await db_session.execute(select(Trace))).scalars().all()
+    assert traces[0].total_tokens is None
+
+
+async def test_ingest_batch_too_large(
+    client: AsyncClient,
+    create_api_key: tuple[str, str],
+) -> None:
+    """A batch exceeding MAX_BATCH_SIZE should return 413."""
+    raw_key, _ = create_api_key
+    payload = [_make_span_payload(span_id=f"s{i}", trace_id=f"t{i}") for i in range(1001)]
+    response = await client.post("/ingest/batch", json=payload, headers={"X-Trace-Key": raw_key})
+    assert response.status_code == 413
+
+
+async def test_ingest_revoked_key_rejected(
+    client: AsyncClient,
+    create_api_key: tuple[str, str],
+    db_session: AsyncSession,
+) -> None:
+    """A revoked API key should return 401."""
+    raw_key, _ = create_api_key
+
+    # Revoke the key directly in the DB
+    from api.models import ApiKey
+
+    keys = (await db_session.execute(select(ApiKey))).scalars().all()
+    keys[0].revoked_at = datetime(2026, 1, 1)
+    await db_session.commit()
+
+    response = await client.post(
+        "/ingest/batch",
+        json=[_make_span_payload()],
+        headers={"X-Trace-Key": raw_key},
+    )
+    assert response.status_code == 401
+
+
+async def test_ingest_status_escalation_to_error(
+    client: AsyncClient,
+    create_api_key: tuple[str, str],
+    db_session: AsyncSession,
+) -> None:
+    """If any span has status=error, the trace status should be 'error'."""
+    raw_key, _ = create_api_key
+    trace_id = "status_test"
+
+    # First batch: ok
+    batch_1 = [_make_span_payload(trace_id=trace_id, span_id="ok_span", status="ok")]
+    await client.post("/ingest/batch", json=batch_1, headers={"X-Trace-Key": raw_key})
+
+    # Second batch: error
+    batch_2 = [
+        _make_span_payload(
+            trace_id=trace_id,
+            span_id="err_span",
+            status="error",
+            error_message="boom",
+        )
+    ]
+    await client.post("/ingest/batch", json=batch_2, headers={"X-Trace-Key": raw_key})
+
+    traces = (await db_session.execute(select(Trace))).scalars().all()
+    assert traces[0].status == "error"

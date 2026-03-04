@@ -1,11 +1,14 @@
 """Ingestion service — processes batches of spans from the SDK."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 from itertools import groupby
 from operator import attrgetter
 
+from sqlalchemy.exc import DBAPIError, IntegrityError, OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from api.config import settings
+from api.constants import STATUS_ERROR, STATUS_OK
 from api.dal import spans as span_dal
 from api.dal import traces as trace_dal
 from api.logger import logger
@@ -22,9 +25,13 @@ class IngestResult:
 
 
 def _to_naive_utc(dt: datetime) -> datetime:
-    """Strip timezone info for DB storage (SQLite stores naive datetimes)."""
+    """Convert a datetime to a naive UTC datetime for DB storage.
+
+    - Naive datetimes are assumed to already be UTC.
+    - Aware datetimes are converted to UTC first, then stripped.
+    """
     if dt.tzinfo is not None:
-        return dt.replace(tzinfo=None)
+        return dt.astimezone(UTC).replace(tzinfo=None)
     return dt
 
 
@@ -41,11 +48,13 @@ def _map_span_to_orm(payload: SpanIngestPayload, org_id: str) -> Span:
         model=payload.model,
         started_at=_to_naive_utc(payload.start_time),
         ended_at=_to_naive_utc(end),
+        prompt_text=payload.prompt_text,
         prompt_tokens=payload.prompt_tokens,
         completion_text=payload.completion_text,
         completion_tokens=payload.completion_tokens,
         completion_logprobs=payload.completion_logprobs,
         input_locals=payload.inputs,
+        output=payload.output,
         error=payload.error_message,
         span_metadata=payload.tags,
     )
@@ -70,8 +79,8 @@ def _compute_trace_aggregates(
     total_completion = sum(s.completion_tokens or 0 for s in spans)
     total_tokens = (total_prompt + total_completion) or None
 
-    has_error = any(s.status == "error" for s in spans)
-    status = "error" if has_error else "ok"
+    has_error = any(s.status == STATUS_ERROR for s in spans)
+    status = STATUS_ERROR if has_error else STATUS_OK
 
     return {
         "function_name": reference.function_name,
@@ -122,14 +131,24 @@ async def process_batch(
                 inserted = await span_dal.bulk_create_spans(db, orm_spans)
                 accepted += inserted
 
-        except Exception:
+        except (IntegrityError, DBAPIError) as exc:
             logger.warning(
-                "Failed to ingest trace group %s (%d spans)",
+                "Failed to ingest trace group org_id=%s trace_id=%s (%d spans): %s",
+                org_id,
                 trace_id,
                 len(group_spans),
-                exc_info=True,
+                type(exc).__name__,
+                exc_info=settings.is_debug,
             )
             failed += len(group_spans)
+        except OperationalError:
+            logger.error(
+                "DB operational error during ingest org_id=%s trace_id=%s",
+                org_id,
+                trace_id,
+                exc_info=True,
+            )
+            raise
 
     if accepted > 0:
         event = UsageEvent(
@@ -138,7 +157,5 @@ async def process_batch(
             quantity=accepted,
         )
         db.add(event)
-
-    await db.commit()
 
     return IngestResult(accepted=accepted, failed=failed)

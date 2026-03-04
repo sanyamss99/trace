@@ -131,76 +131,49 @@ class TestSegmentDetection:
 
 
 class TestUtilizationScoring:
-    """Unit tests for compute_utilization."""
+    """Unit tests for compute_utilization (pure lexical overlap)."""
 
     def test_high_utilization(self) -> None:
-        """Chunk words in uncertain completion tokens score > 0."""
+        """Chunk words appearing in completion score > 0."""
         chunk = "machine learning neural networks"
         completion = "machine learning uses neural architectures"
-        logprobs = [
-            {"token": "machine", "logprob": -2.0},
-            {"token": " learning", "logprob": -2.0},
-            {"token": " uses", "logprob": -2.0},
-            {"token": " neural", "logprob": -2.0},
-            {"token": " architectures", "logprob": -2.0},
-        ]
-        score = compute_utilization(chunk, completion, logprobs)
-        assert score > 0.0
+        score = compute_utilization(chunk, completion)
+        # "machine", "learning", "neural" overlap — 3/5 = 0.6
+        assert score > 0.5
 
-    def test_no_uncertain_tokens(self) -> None:
-        """All-confident completion returns 0.0."""
-        chunk = "some context text"
-        completion = "confident output here"
-        logprobs = [
-            {"token": "confident", "logprob": -0.1},
-            {"token": " output", "logprob": -0.2},
-            {"token": " here", "logprob": -0.3},
-        ]
-        score = compute_utilization(chunk, completion, logprobs)
-        assert score == 0.0
+    def test_full_overlap(self) -> None:
+        """Completion that quotes the chunk verbatim scores 1.0."""
+        chunk = "Python was created by Guido van Rossum"
+        completion = "Python was created by Guido van Rossum"
+        score = compute_utilization(chunk, completion)
+        assert score == 1.0
 
     def test_no_overlap(self) -> None:
-        """Uncertain tokens with zero overlap score 0.0."""
+        """No shared words = 0.0."""
         chunk = "completely different vocabulary"
         completion = "unrelated tokens here"
-        logprobs = [
-            {"token": "unrelated", "logprob": -2.0},
-            {"token": " tokens", "logprob": -2.0},
-            {"token": " here", "logprob": -2.0},
-        ]
-        score = compute_utilization(chunk, completion, logprobs)
+        score = compute_utilization(chunk, completion)
         assert score == 0.0
 
     def test_empty_inputs(self) -> None:
         """Empty inputs return 0.0."""
-        assert compute_utilization("", "text", [{"token": "t", "logprob": -1.5}]) == 0.0
-        assert compute_utilization("text", "", [{"token": "t", "logprob": -1.5}]) == 0.0
-        assert compute_utilization("text", "text", []) == 0.0
+        assert compute_utilization("", "text") == 0.0
+        assert compute_utilization("text", "") == 0.0
 
     def test_score_between_zero_and_one(self) -> None:
         """Score is always in [0.0, 1.0] range."""
         chunk = "python programming language"
         completion = "python is a great programming language for beginners"
-        logprobs = [
-            {"token": "python", "logprob": -2.0},
-            {"token": " is", "logprob": -0.5},
-            {"token": " a", "logprob": -0.5},
-            {"token": " great", "logprob": -2.0},
-            {"token": " programming", "logprob": -2.0},
-            {"token": " language", "logprob": -2.0},
-            {"token": " for", "logprob": -2.0},
-            {"token": " beginners", "logprob": -2.0},
-        ]
-        score = compute_utilization(chunk, completion, logprobs)
+        score = compute_utilization(chunk, completion)
         assert 0.0 <= score <= 1.0
 
-    def test_legacy_float_format(self) -> None:
-        """Legacy list[float] format still works via whitespace alignment."""
-        chunk = "machine learning"
-        completion = "machine learning works"
-        logprobs = [-2.0, -2.0, -2.0]
-        score = compute_utilization(chunk, completion, logprobs)
-        assert score > 0.0
+    def test_partial_overlap(self) -> None:
+        """Partial overlap produces fractional score."""
+        chunk = "python language"
+        completion = "python is a language for beginners"
+        score = compute_utilization(chunk, completion)
+        # "python", "language" overlap — 2/6 = 0.333
+        assert 0.3 <= score <= 0.4
 
 
 # ---------------------------------------------------------------------------
@@ -209,13 +182,12 @@ class TestUtilizationScoring:
 
 
 class TestInfluenceScoring:
-    """Unit tests for compute_influence."""
+    """Unit tests for compute_influence (blended presence + logprob-weighted)."""
 
     def test_weights_by_uncertainty(self) -> None:
-        """More uncertain overlapping tokens produce higher influence."""
+        """Uncertain overlapping tokens produce high influence."""
         chunk = "neural networks"
         completion = "neural networks are powerful"
-        # "neural" is very uncertain (-5.0), "networks" moderately (-2.0)
         logprobs = [
             {"token": "neural", "logprob": -5.0},
             {"token": " networks", "logprob": -2.0},
@@ -223,9 +195,10 @@ class TestInfluenceScoring:
             {"token": " powerful", "logprob": -2.0},
         ]
         score = compute_influence(chunk, completion, logprobs)
-        assert score > 0.0
-        # overlap weight = 5.0 + 2.0 = 7.0, total = 5.0+2.0+2.0+2.0 = 11.0
-        assert abs(score - 7.0 / 11.0) < 0.01
+        assert score > 0.5
+        # presence = 2/4 = 0.5, logprob = 7/11 = 0.636
+        # blended = 0.4*0.5 + 0.6*0.636 ≈ 0.58
+        assert 0.55 <= score <= 0.65
 
     def test_no_overlap_zero_influence(self) -> None:
         """No overlapping tokens = 0.0 influence."""
@@ -238,22 +211,31 @@ class TestInfluenceScoring:
         ]
         assert compute_influence(chunk, completion, logprobs) == 0.0
 
-    def test_no_uncertain_tokens(self) -> None:
-        """All confident tokens = 0.0."""
-        chunk = "some text"
+    def test_confident_tokens_still_score_via_presence(self) -> None:
+        """Presence baseline gives non-zero score even when all tokens confident."""
+        chunk = "some text here"
         completion = "some text here"
         logprobs = [
             {"token": "some", "logprob": -0.1},
-            {"token": " text", "logprob": -0.2},
-            {"token": " here", "logprob": -0.3},
+            {"token": " text", "logprob": -0.1},
+            {"token": " here", "logprob": -0.1},
         ]
-        assert compute_influence(chunk, completion, logprobs) == 0.0
+        score = compute_influence(chunk, completion, logprobs)
+        # All confident (no uncertain tokens) → falls back to presence = 3/3 = 1.0
+        assert score == 1.0
 
     def test_empty_inputs(self) -> None:
         """Empty inputs return 0.0."""
         assert compute_influence("", "text", [{"token": "t", "logprob": -1.5}]) == 0.0
         assert compute_influence("text", "", [{"token": "t", "logprob": -1.5}]) == 0.0
-        assert compute_influence("text", "text", []) == 0.0
+
+    def test_no_logprobs_uses_presence(self) -> None:
+        """Without logprobs, influence falls back to pure presence."""
+        chunk = "python language"
+        completion = "python is a language for beginners"
+        score = compute_influence(chunk, completion, None)
+        # "python", "language" overlap — 2/6 = 0.333
+        assert 0.3 <= score <= 0.4
 
     def test_influence_between_zero_and_one(self) -> None:
         """Score is always in [0.0, 1.0]."""
@@ -261,8 +243,8 @@ class TestInfluenceScoring:
         completion = "python is a language for beginners"
         logprobs = [
             {"token": "python", "logprob": -3.0},
-            {"token": " is", "logprob": -0.5},
-            {"token": " a", "logprob": -0.5},
+            {"token": " is", "logprob": -0.1},
+            {"token": " a", "logprob": -0.1},
             {"token": " language", "logprob": -2.0},
             {"token": " for", "logprob": -2.0},
             {"token": " beginners", "logprob": -2.0},
@@ -270,20 +252,18 @@ class TestInfluenceScoring:
         score = compute_influence(chunk, completion, logprobs)
         assert 0.0 <= score <= 1.0
 
-    def test_influence_differs_from_utilization(self) -> None:
-        """Influence and utilization can differ when uncertainty varies."""
+    def test_influence_higher_than_utilization_for_uncertain_overlap(self) -> None:
+        """Influence rewards uncertain-token overlap more than raw utilization."""
         chunk = "deep learning"
         completion = "deep learning is useful"
-        # "deep" is extremely uncertain, "learning" only slightly
         logprobs = [
             {"token": "deep", "logprob": -10.0},
             {"token": " learning", "logprob": -1.5},
             {"token": " is", "logprob": -2.0},
             {"token": " useful", "logprob": -2.0},
         ]
-        util = compute_utilization(chunk, completion, logprobs)
+        util = compute_utilization(chunk, completion)
         infl = compute_influence(chunk, completion, logprobs)
-        # Both > 0, but influence should be higher because "deep" is very uncertain
         assert util > 0.0
         assert infl > 0.0
         assert infl > util
@@ -295,36 +275,173 @@ class TestInfluenceScoring:
 
 
 def _make_span_with_prompt(**overrides: object) -> dict:
-    """Build a span payload with prompt_text and logprobs."""
+    """Build a span payload with prompt_text and logprobs.
+
+    Simulates a RAG pipeline answering a question about the Transformer
+    architecture using chunked Wikipedia article text.
+    """
     base: dict = {
         "trace_id": "attr_trace_1",
         "span_id": "attr_span_1",
         "span_type": "llm",
-        "function_name": "my_rag.answer",
-        "module": "my_rag",
+        "function_name": "rag_pipeline.generate_answer",
+        "module": "rag_pipeline",
         "start_time": "2026-03-01T00:00:00+00:00",
-        "end_time": "2026-03-01T00:00:01+00:00",
-        "duration_ms": 1000.0,
+        "end_time": "2026-03-01T00:00:03+00:00",
+        "duration_ms": 3000.0,
         "status": "ok",
         "model": "gpt-4o",
         "prompt_text": (
-            "[system]\nYou are a helpful assistant. Use the context below.\n"
-            "<doc>Python was created by Guido van Rossum.</doc>\n"
-            "<doc>Python 3.11 added exception groups.</doc>\n\n"
-            "[user]\nWho created Python?"
+            "[system]\n"
+            "You are a knowledgeable AI assistant. Answer the user's question using "
+            "ONLY the provided context documents. Be precise and cite details.\n"
+            "<doc title=\"History\">"
+            "The Transformer architecture was introduced in 2017 by researchers at "
+            "Google Brain in the paper \"Attention Is All You Need\" by Ashish Vaswani, "
+            "Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan Gomez, "
+            "Lukasz Kaiser, and Illia Polosukhin. It was presented at NeurIPS 2017. "
+            "Prior to the Transformer, dominant models were recurrent neural networks "
+            "like LSTMs and GRUs which processed tokens sequentially, creating a "
+            "bottleneck where the hidden state had to carry all prior information."
+            "</doc>\n"
+            "<doc title=\"Architecture\">"
+            "The Transformer follows an encoder-decoder structure using stacked "
+            "self-attention and feed-forward layers. The encoder has N=6 identical "
+            "layers with multi-head self-attention and position-wise feed-forward "
+            "networks. Residual connections and layer normalization are used around "
+            "each sub-layer. The decoder adds a third sub-layer for cross-attention "
+            "over the encoder output."
+            "</doc>\n"
+            "<doc title=\"Attention\">"
+            "The core innovation is scaled dot-product attention: "
+            "Attention(Q,K,V) = softmax(QK^T / sqrt(d_k)) V. The scaling factor "
+            "1/sqrt(d_k) prevents dot products from growing too large. Multi-head "
+            "attention projects Q, K, V with h=8 different learned projections and "
+            "concatenates results, allowing the model to attend to different "
+            "representation subspaces simultaneously."
+            "</doc>\n"
+            "<doc title=\"Impact\">"
+            "BERT (2018) used the encoder for masked language modeling. The GPT "
+            "family from OpenAI uses the decoder trained autoregressively. GPT-3 "
+            "with 175 billion parameters showed few-shot learning. Beyond text, "
+            "Vision Transformers handle image classification, AlphaFold 2 predicts "
+            "protein structures, and DALL-E generates images from text."
+            "</doc>\n\n"
+            "[user]\n"
+            "How does multi-head attention work in the Transformer and why is the "
+            "scaling factor important?"
         ),
-        "completion_text": "Python was created by Guido van Rossum.",
+        "completion_text": (
+            "Multi-head attention works by projecting queries, keys, and values "
+            "through h=8 different learned linear projections and performing scaled "
+            "dot-product attention on each in parallel. The results are concatenated "
+            "and linearly transformed. This lets the model attend to different "
+            "representation subspaces at different positions simultaneously.\n\n"
+            "The scaling factor 1/sqrt(d_k) is important because without it, the "
+            "dot products between queries and keys grow large in magnitude for "
+            "high-dimensional vectors, pushing the softmax into regions with "
+            "extremely small gradients that impede learning."
+        ),
         "completion_logprobs": [
-            {"token": "Python", "logprob": -0.1},
-            {"token": " was", "logprob": -0.2},
-            {"token": " created", "logprob": -0.3},
-            {"token": " by", "logprob": -2.0},
-            {"token": " Guido", "logprob": -1.5},
-            {"token": " van", "logprob": -2.0},
-            {"token": " Rossum", "logprob": -0.1},
+            {"token": "Multi", "logprob": -0.10},
+            {"token": "-head", "logprob": -0.06},
+            {"token": " attention", "logprob": -0.04},
+            {"token": " works", "logprob": -0.08},
+            {"token": " by", "logprob": -0.04},
+            {"token": " projecting", "logprob": -0.20},
+            {"token": " queries", "logprob": -0.12},
+            {"token": ",", "logprob": -0.02},
+            {"token": " keys", "logprob": -0.08},
+            {"token": ",", "logprob": -0.02},
+            {"token": " and", "logprob": -0.03},
+            {"token": " values", "logprob": -0.08},
+            {"token": " through", "logprob": -0.10},
+            {"token": " h", "logprob": -0.15},
+            {"token": "=8", "logprob": -0.45},
+            {"token": " different", "logprob": -0.10},
+            {"token": " learned", "logprob": -0.15},
+            {"token": " linear", "logprob": -0.18},
+            {"token": " projections", "logprob": -0.12},
+            {"token": " and", "logprob": -0.03},
+            {"token": " performing", "logprob": -0.10},
+            {"token": " scaled", "logprob": -0.12},
+            {"token": " dot", "logprob": -0.08},
+            {"token": "-product", "logprob": -0.06},
+            {"token": " attention", "logprob": -0.04},
+            {"token": " on", "logprob": -0.03},
+            {"token": " each", "logprob": -0.06},
+            {"token": " in", "logprob": -0.04},
+            {"token": " parallel", "logprob": -0.08},
+            {"token": ".", "logprob": -0.02},
+            {"token": " The", "logprob": -0.05},
+            {"token": " results", "logprob": -0.06},
+            {"token": " are", "logprob": -0.04},
+            {"token": " concatenated", "logprob": -0.25},
+            {"token": " and", "logprob": -0.03},
+            {"token": " linearly", "logprob": -0.30},
+            {"token": " transformed", "logprob": -0.18},
+            {"token": ".", "logprob": -0.02},
+            {"token": " This", "logprob": -0.06},
+            {"token": " lets", "logprob": -0.12},
+            {"token": " the", "logprob": -0.02},
+            {"token": " model", "logprob": -0.05},
+            {"token": " attend", "logprob": -0.12},
+            {"token": " to", "logprob": -0.03},
+            {"token": " different", "logprob": -0.06},
+            {"token": " representation", "logprob": -0.18},
+            {"token": " subspaces", "logprob": -0.40},
+            {"token": " at", "logprob": -0.04},
+            {"token": " different", "logprob": -0.06},
+            {"token": " positions", "logprob": -0.08},
+            {"token": " simultaneously", "logprob": -0.20},
+            {"token": ".", "logprob": -0.02},
+            {"token": "\n\n", "logprob": -0.06},
+            {"token": "The", "logprob": -0.05},
+            {"token": " scaling", "logprob": -0.10},
+            {"token": " factor", "logprob": -0.06},
+            {"token": " 1", "logprob": -0.15},
+            {"token": "/sqrt", "logprob": -0.12},
+            {"token": "(d", "logprob": -0.10},
+            {"token": "_k", "logprob": -0.08},
+            {"token": ")", "logprob": -0.03},
+            {"token": " is", "logprob": -0.03},
+            {"token": " important", "logprob": -0.08},
+            {"token": " because", "logprob": -0.05},
+            {"token": " without", "logprob": -0.12},
+            {"token": " it", "logprob": -0.04},
+            {"token": ",", "logprob": -0.02},
+            {"token": " the", "logprob": -0.02},
+            {"token": " dot", "logprob": -0.08},
+            {"token": " products", "logprob": -0.10},
+            {"token": " between", "logprob": -0.08},
+            {"token": " queries", "logprob": -0.10},
+            {"token": " and", "logprob": -0.03},
+            {"token": " keys", "logprob": -0.06},
+            {"token": " grow", "logprob": -0.20},
+            {"token": " large", "logprob": -0.12},
+            {"token": " in", "logprob": -0.03},
+            {"token": " magnitude", "logprob": -0.25},
+            {"token": " for", "logprob": -0.04},
+            {"token": " high", "logprob": -0.15},
+            {"token": "-dimensional", "logprob": -0.10},
+            {"token": " vectors", "logprob": -0.18},
+            {"token": ",", "logprob": -0.02},
+            {"token": " pushing", "logprob": -0.30},
+            {"token": " the", "logprob": -0.02},
+            {"token": " softmax", "logprob": -0.08},
+            {"token": " into", "logprob": -0.06},
+            {"token": " regions", "logprob": -0.25},
+            {"token": " with", "logprob": -0.04},
+            {"token": " extremely", "logprob": -0.20},
+            {"token": " small", "logprob": -0.12},
+            {"token": " gradients", "logprob": -0.18},
+            {"token": " that", "logprob": -0.06},
+            {"token": " impede", "logprob": -0.70},
+            {"token": " learning", "logprob": -0.08},
+            {"token": ".", "logprob": -0.02},
         ],
-        "prompt_tokens": 50,
-        "completion_tokens": 7,
+        "prompt_tokens": 680,
+        "completion_tokens": 92,
         "environment": "test",
     }
     base.update(overrides)
@@ -493,11 +610,11 @@ async def test_attribution_unauthenticated(
 
 
 @pytest.mark.asyncio
-async def test_utilization_scores_on_retrieval_chunks(
+async def test_all_segments_scored(
     client: AsyncClient,
     create_api_key: tuple[str, str],
 ) -> None:
-    """Retrieval chunks get utilization_score when logprobs are available."""
+    """All segment types get utilization and influence scores."""
     raw_key, _ = create_api_key
     headers = {"X-Trace-Key": raw_key}
 
@@ -510,8 +627,13 @@ async def test_utilization_scores_on_retrieval_chunks(
     response = await client.get("/traces/spans/util_span_1/attribution", headers=headers)
     assert response.status_code == 200
     data = response.json()
-    retrieval_segs = [s for s in data["segments"] if s["segment_type"] == "retrieval"]
-    assert len(retrieval_segs) > 0
-    for seg in retrieval_segs:
+    assert len(data["segments"]) > 0
+    for seg in data["segments"]:
         assert seg["utilization_score"] is not None
         assert seg["influence_score"] is not None
+
+    # Retrieval chunks should have meaningful non-zero scores
+    retrieval_segs = [s for s in data["segments"] if s["segment_type"] == "retrieval"]
+    assert len(retrieval_segs) > 0
+    top_chunk = max(retrieval_segs, key=lambda s: s["influence_score"])
+    assert top_chunk["influence_score"] > 0.15

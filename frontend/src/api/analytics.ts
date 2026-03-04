@@ -1,0 +1,45 @@
+import { apiFetch } from './client';
+import type {
+  OverviewStats,
+  TimeSeriesPoint,
+  FunctionCostItem,
+} from '../types/analytics';
+
+export interface AnalyticsFilters {
+  started_after?: string;
+  started_before?: string;
+  environment?: string;
+}
+
+function buildQuery(filters: AnalyticsFilters): string {
+  const params = new URLSearchParams();
+  if (filters.started_after) params.set('started_after', filters.started_after);
+  if (filters.started_before) params.set('started_before', filters.started_before);
+  if (filters.environment) params.set('environment', filters.environment);
+  const qs = params.toString();
+  return qs ? `?${qs}` : '';
+}
+
+export async function fetchOverview(
+  filters: AnalyticsFilters = {},
+): Promise<OverviewStats> {
+  return apiFetch<OverviewStats>(
+    `/traces/analytics/overview${buildQuery(filters)}`,
+  );
+}
+
+export async function fetchTimeseries(
+  filters: AnalyticsFilters = {},
+): Promise<TimeSeriesPoint[]> {
+  return apiFetch<TimeSeriesPoint[]>(
+    `/traces/analytics/timeseries${buildQuery(filters)}`,
+  );
+}
+
+export async function fetchCostByFunction(
+  filters: AnalyticsFilters = {},
+): Promise<FunctionCostItem[]> {
+  return apiFetch<FunctionCostItem[]>(
+    `/traces/analytics/cost-by-function${buildQuery(filters)}`,
+  );
+}

@@ -90,49 +90,86 @@ def _extract_token_counts(result: Any) -> dict[str, int]:
     return counts
 
 
-def _extract_logprobs(result: Any) -> list[float] | None:
-    """Try each vendor's logprobs path."""
-    # OpenAI / xAI: result.choices[0].logprobs.content[].logprob
-    # Together: result.choices[0].logprobs.token_logprobs (parallel array)
+def _extract_logprobs(result: Any) -> list[dict[str, Any]] | None:
+    """Try each vendor's logprobs path.
+
+    Returns list of {"token": str, "logprob": float} dicts for heatmap generation.
+    """
+    # OpenAI / xAI: result.choices[0].logprobs.content[].{token, logprob}
+    # Together: result.choices[0].logprobs.token_logprobs (parallel array, no tokens)
     choices = getattr(result, "choices", None)
     if choices and len(choices) > 0:
         logprobs = getattr(choices[0], "logprobs", None)
         if logprobs is not None:
-            # Together flat format: logprobs.token_logprobs
-            token_logprobs = getattr(logprobs, "token_logprobs", None)
-            if isinstance(token_logprobs, list) and token_logprobs:
-                return [float(lp) for lp in token_logprobs if lp is not None]
-
-            # OpenAI newer format: logprobs.content[].logprob
+            # OpenAI newer format: logprobs.content[].{token, logprob}
             content_logprobs = getattr(logprobs, "content", None)
             if isinstance(content_logprobs, list) and content_logprobs:
-                values = [getattr(entry, "logprob", None) for entry in content_logprobs]
-                values = [float(lp) for lp in values if lp is not None]
-                if values:
-                    return values
+                entries = []
+                for entry in content_logprobs:
+                    token = getattr(entry, "token", None)
+                    lp = getattr(entry, "logprob", None)
+                    if lp is not None:
+                        entries.append(
+                            {
+                                "token": str(token) if token is not None else "",
+                                "logprob": float(lp),
+                            }
+                        )
+                if entries:
+                    return entries
 
-    # Google Gemini: result.candidates[0].logprobs_result.chosen_candidates[].log_probability
+            # Together flat format: logprobs.token_logprobs (no token strings)
+            token_logprobs = getattr(logprobs, "token_logprobs", None)
+            if isinstance(token_logprobs, list) and token_logprobs:
+                # Together also has logprobs.tokens parallel array
+                tokens = getattr(logprobs, "tokens", None)
+                entries = []
+                for i, lp in enumerate(token_logprobs):
+                    if lp is not None:
+                        tok = tokens[i] if isinstance(tokens, list) and i < len(tokens) else ""
+                        entries.append({"token": str(tok), "logprob": float(lp)})
+                if entries:
+                    return entries
+
+    # Google Gemini: result.candidates[0].logprobs_result.chosen_candidates[]
     candidates = getattr(result, "candidates", None)
     if candidates and len(candidates) > 0:
         logprobs_result = getattr(candidates[0], "logprobs_result", None)
         if logprobs_result is not None:
             chosen = getattr(logprobs_result, "chosen_candidates", None)
             if isinstance(chosen, list) and chosen:
-                values = [getattr(c, "log_probability", None) for c in chosen]
-                values = [float(lp) for lp in values if lp is not None]
-                if values:
-                    return values
+                entries = []
+                for c in chosen:
+                    token = getattr(c, "token", None)
+                    lp = getattr(c, "log_probability", None)
+                    if lp is not None:
+                        entries.append(
+                            {
+                                "token": str(token) if token is not None else "",
+                                "logprob": float(lp),
+                            }
+                        )
+                if entries:
+                    return entries
 
-    # Ollama: result.logprobs[].logprob (list of Logprob objects, directly on response)
+    # Ollama: result.logprobs[].{token, logprob}
     logprobs_list = getattr(result, "logprobs", None)
     if isinstance(logprobs_list, list) and logprobs_list:
-        # Check that items are objects with .logprob (not raw floats)
         first = logprobs_list[0]
         if hasattr(first, "logprob"):
-            values = [getattr(lp, "logprob", None) for lp in logprobs_list]
-            values = [float(v) for v in values if v is not None]
-            if values:
-                return values
+            entries = []
+            for lp_obj in logprobs_list:
+                token = getattr(lp_obj, "token", None)
+                lp = getattr(lp_obj, "logprob", None)
+                if lp is not None:
+                    entries.append(
+                        {
+                            "token": str(token) if token is not None else "",
+                            "logprob": float(lp),
+                        }
+                    )
+            if entries:
+                return entries
 
     return None
 

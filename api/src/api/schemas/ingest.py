@@ -48,7 +48,7 @@ class SpanIngestPayload(BaseModel):
     completion_text: str | None = Field(None, max_length=1_000_000)
     prompt_tokens: int | None = Field(None, ge=0, le=10_000_000)
     completion_tokens: int | None = Field(None, ge=0, le=10_000_000)
-    completion_logprobs: list[float] | None = Field(None, max_length=10_000_000)
+    completion_logprobs: list[dict[str, Any]] | None = Field(None, max_length=10_000_000)
     environment: str | None = Field(None, max_length=128)
     tags: dict[str, str] | None = None
 

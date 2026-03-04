@@ -43,3 +43,10 @@ class ConflictError(TraceAppError):
 
     def __init__(self, message: str = "Resource conflict") -> None:
         super().__init__(message, status_code=409)
+
+
+class AttributionError(TraceAppError):
+    """Raised when attribution computation fails (e.g., no prompt_text)."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__(message, status_code=422)

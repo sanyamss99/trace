@@ -37,7 +37,8 @@ class SpanData(BaseModel):
     completion_text: str | None = None
     prompt_tokens: int | None = None
     completion_tokens: int | None = None
-    completion_logprobs: list[float] | None = None
+    completion_logprobs: list[dict[str, Any]] | None = None
+    prompt_text: str | None = None
 
     # Metadata
     environment: str | None = None
@@ -58,6 +59,8 @@ class SpanData(BaseModel):
             size += len(str(self.output))
         if self.completion_text:
             size += len(self.completion_text)
+        if self.prompt_text:
+            size += len(self.prompt_text)
         if self.error_message:
             size += len(self.error_message)
         if self.tags:

@@ -6,11 +6,13 @@ Usage:
 
 import asyncio
 import hashlib
+import secrets
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from api.config import settings
+from api.logger import logger
 from api.models import ApiKey, Base, Organization, OrgMember, User
 
 
@@ -20,14 +22,14 @@ async def seed() -> None:
     # Create all tables
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    print("Tables created.")
+    logger.info("Tables created.")
 
     session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     async with session_factory() as db:
         # Check if org already exists
         result = await db.execute(select(Organization).where(Organization.name == "Local Dev"))
         if result.scalar_one_or_none():
-            print("Seed data already exists. Skipping.")
+            logger.info("Seed data already exists. Skipping.")
             await engine.dispose()
             return
 
@@ -46,8 +48,8 @@ async def seed() -> None:
         db.add(member)
         await db.flush()
 
-        # Create API key matching the test app's api_key="local-dev"
-        raw_key = "local-dev"
+        # Create API key with a cryptographically random value
+        raw_key = f"tr_{secrets.token_hex(24)}"
         key_hash = hashlib.sha256(raw_key.encode()).hexdigest()
         api_key = ApiKey(
             org_id=org.id,
@@ -58,10 +60,10 @@ async def seed() -> None:
         db.add(api_key)
         await db.commit()
 
-        print(f"Org:     {org.id} ({org.name})")
-        print(f"User:    {user.id} ({user.email})")
-        print(f"API Key: raw='local-dev', hash={key_hash}")
-        print("Seed complete.")
+        logger.info("Org:     %s (%s)", org.id, org.name)
+        logger.info("User:    %s (%s)", user.id, user.email)
+        logger.info("API Key: %s", raw_key)
+        logger.info("Seed complete.")
 
     await engine.dispose()
 

@@ -17,13 +17,14 @@ from sqlalchemy import (
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
+from api.constants import STATUS_OK
+
 
 def _naive_utcnow() -> datetime:
     """Return current UTC time as a naive datetime (no tzinfo).
 
     Postgres TIMESTAMP WITHOUT TIME ZONE columns reject timezone-aware
-    datetimes. This helper produces naive UTC values compatible with both
-    SQLite and Postgres.
+    datetimes. This helper produces naive UTC values safe for storage.
     """
     return datetime.now(UTC).replace(tzinfo=None)
 
@@ -141,7 +142,7 @@ class Trace(Base):
     ended_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     total_tokens: Mapped[int | None] = mapped_column(Integer)
     total_cost_usd: Mapped[float | None] = mapped_column(Numeric(10, 6))
-    status: Mapped[str] = mapped_column(Text, default="success")
+    status: Mapped[str] = mapped_column(Text, default=STATUS_OK)
     tags: Mapped[dict | None] = mapped_column(JSON, default=dict)
 
     # Relationships
@@ -187,10 +188,11 @@ class Span(Base):
     prompt_tokens: Mapped[int | None] = mapped_column(Integer)
     completion_text: Mapped[str | None] = mapped_column(Text)
     completion_tokens: Mapped[int | None] = mapped_column(Integer)
-    completion_logprobs: Mapped[dict | None] = mapped_column(JSON)
+    completion_logprobs: Mapped[list | None] = mapped_column(JSON)
     cost_usd: Mapped[float | None] = mapped_column(Numeric(10, 6))
     model_params: Mapped[dict | None] = mapped_column(JSON)
     input_locals: Mapped[dict | None] = mapped_column(JSON)
+    output: Mapped[dict | None] = mapped_column(JSON)
     error: Mapped[str | None] = mapped_column(Text)
     span_metadata: Mapped[dict | None] = mapped_column("metadata", JSON, default=dict)
 

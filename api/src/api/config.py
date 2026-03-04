@@ -4,9 +4,15 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
-    database_url: str = "sqlite+aiosqlite:///./trace.db"
-    trace_api_key: str = "tr_dev_change_me"
+    database_url: str = "postgresql+asyncpg://localhost:5432/trace"
     log_level: str = "DEBUG"
+    cors_origins: str = "http://localhost:3000,http://localhost:5173"
+    trust_proxy_headers: bool = False
+
+    @property
+    def is_debug(self) -> bool:
+        """Return True when running in debug/development mode."""
+        return self.log_level.upper() == "DEBUG"
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

@@ -18,12 +18,14 @@ class SpanResponse(BaseModel):
     started_at: datetime
     ended_at: datetime
     duration_ms: int | None
+    prompt_text: str | None
     prompt_tokens: int | None
     completion_tokens: int | None
     completion_text: str | None
-    completion_logprobs: list[Any] | None
+    completion_logprobs: list[float] | None
     cost_usd: float | None
     input_locals: dict[str, Any] | None
+    output: Any | None
     error: str | None
     metadata: dict[str, Any] | None = Field(validation_alias="span_metadata")
 
@@ -49,13 +51,11 @@ class TraceListItem(BaseModel):
 
 
 class PaginatedTraceListResponse(BaseModel):
-    """Paginated list of traces."""
+    """Cursor-paginated list of traces."""
 
     traces: list[TraceListItem]
-    total: int
-    page: int
-    page_size: int
-    has_more: bool
+    next_cursor: str | None
+    limit: int
 
 
 class TraceDetailResponse(BaseModel):

@@ -3,6 +3,7 @@ import type {
   OverviewStats,
   TimeSeriesPoint,
   FunctionCostItem,
+  ModelCostItem,
 } from '../types/analytics';
 
 export interface AnalyticsFilters {
@@ -41,5 +42,13 @@ export async function fetchCostByFunction(
 ): Promise<FunctionCostItem[]> {
   return apiFetch<FunctionCostItem[]>(
     `/traces/analytics/cost-by-function${buildQuery(filters)}`,
+  );
+}
+
+export async function fetchCostByModel(
+  filters: AnalyticsFilters = {},
+): Promise<ModelCostItem[]> {
+  return apiFetch<ModelCostItem[]>(
+    `/traces/analytics/cost-by-model${buildQuery(filters)}`,
   );
 }

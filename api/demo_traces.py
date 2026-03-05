@@ -13,15 +13,13 @@ Requires: a running API server (make dev) and a seeded API key (uv run python se
 from __future__ import annotations
 
 import asyncio
-import hashlib
 import sys
 
 import httpx
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from api.config import settings
-from api.models import ApiKey, Base
+from api.models import ApiKey
 
 API_BASE = "http://localhost:8000"
 

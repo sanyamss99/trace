@@ -22,4 +22,14 @@ export interface FunctionCostItem {
   avg_cost_usd: number | null;
   avg_duration_ms: number | null;
   error_count: number;
+  avg_quality_score: number | null;
+}
+
+export interface ModelCostItem {
+  model: string;
+  call_count: number;
+  total_tokens: number | null;
+  total_cost_usd: number | null;
+  avg_cost_usd: number | null;
+  avg_quality_score: number | null;
 }

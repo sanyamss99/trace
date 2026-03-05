@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import hashlib
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Annotated
 
 from fastapi import Depends, Header, Request
@@ -26,6 +26,36 @@ class AuthContext:
 
     org_id: str
     user_id: str
+    email: str = field(default="")
+
+
+def _extract_bearer_token(request: Request) -> str | None:
+    """Extract a Bearer token from the Authorization header."""
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        return auth_header[7:]
+    return None
+
+
+def _authenticate_jwt(token: str) -> AuthContext:
+    """Validate a JWT and return an AuthContext.
+
+    Raises AuthenticationError on invalid/expired tokens.
+    """
+    import jwt
+
+    try:
+        payload = jwt.decode(token, settings.jwt_secret, algorithms=["HS256"])
+    except jwt.ExpiredSignatureError as err:
+        raise AuthenticationError("Token has expired") from err
+    except jwt.InvalidTokenError as err:
+        raise AuthenticationError("Invalid token") from err
+
+    return AuthContext(
+        org_id=payload["org_id"],
+        user_id=payload["sub"],
+        email=payload.get("email", ""),
+    )
 
 
 def _get_client_ip(request: Request) -> str:
@@ -42,11 +72,18 @@ async def _authenticate(
     db: DbSession,
     x_trace_key: Annotated[str | None, Header()] = None,
 ) -> AuthContext:
-    """Validate the X-Trace-Key header and return the full auth context.
+    """Validate credentials and return the auth context.
 
-    Raises AuthenticationError if the key is missing, unknown, or revoked.
+    Tries Bearer JWT first, then falls back to X-Trace-Key.
+    Raises AuthenticationError if neither is provided or valid.
     Raises RateLimitError if the client IP has too many recent failures.
     """
+    # Try JWT first
+    bearer_token = _extract_bearer_token(request)
+    if bearer_token:
+        return _authenticate_jwt(bearer_token)
+
+    # Fall back to API key
     client_ip = _get_client_ip(request)
     endpoint = request.url.path
 
@@ -55,9 +92,9 @@ async def _authenticate(
         raise RateLimitError()
 
     if not x_trace_key:
-        logger.warning("Auth failed: missing API key ip=%s endpoint=%s", client_ip, endpoint)
+        logger.warning("Auth failed: missing credentials ip=%s endpoint=%s", client_ip, endpoint)
         await auth_rate_limiter.record_failure(client_ip)
-        raise AuthenticationError("Missing X-Trace-Key header")
+        raise AuthenticationError("Missing authentication credentials")
 
     key_prefix = x_trace_key[:8]
     key_hash = hashlib.sha256(x_trace_key.encode()).hexdigest()
@@ -110,9 +147,18 @@ async def get_auth_context(
     db: DbSession,
     x_trace_key: Annotated[str | None, Header()] = None,
 ) -> AuthContext:
-    """Validate the X-Trace-Key header and return the full auth context."""
+    """Validate credentials and return the full auth context."""
     return await _authenticate(request, db, x_trace_key)
+
+
+async def get_jwt_auth(request: Request) -> AuthContext:
+    """JWT-only authentication dependency (for endpoints like /auth/me)."""
+    bearer_token = _extract_bearer_token(request)
+    if not bearer_token:
+        raise AuthenticationError("Missing Bearer token")
+    return _authenticate_jwt(bearer_token)
 
 
 OrgId = Annotated[str, Depends(verify_api_key)]
 Auth = Annotated[AuthContext, Depends(get_auth_context)]
+JwtAuth = Annotated[AuthContext, Depends(get_jwt_auth)]

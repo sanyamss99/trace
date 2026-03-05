@@ -13,6 +13,7 @@ from api.models import Span
 from api.schemas.traces import (
     AttributionResponse,
     FunctionCostItem,
+    ModelCostItem,
     OverviewStatsResponse,
     PaginatedTraceListResponse,
     SpanResponse,
@@ -191,6 +192,36 @@ async def get_cost_by_function(
             avg_cost_usd=float(row.avg_cost_usd) if row.avg_cost_usd else None,
             avg_duration_ms=float(row.avg_duration_ms) if row.avg_duration_ms else None,
             error_count=row.error_count,
+            avg_quality_score=float(row.avg_quality_score) if row.avg_quality_score else None,
+        )
+        for row in rows
+    ]
+
+
+@router.get("/analytics/cost-by-model", response_model=list[ModelCostItem])
+async def get_cost_by_model(
+    db: DbSession,
+    org_id: OrgId,
+    started_after: datetime | None = None,
+    started_before: datetime | None = None,
+    environment: str | None = None,
+) -> list[ModelCostItem]:
+    """Get cost and usage aggregates grouped by model name."""
+    rows = await trace_dal.cost_by_model(
+        db,
+        org_id,
+        started_after=started_after,
+        started_before=started_before,
+        environment=environment,
+    )
+    return [
+        ModelCostItem(
+            model=row.model,
+            call_count=row.call_count,
+            total_tokens=row.total_tokens,
+            total_cost_usd=float(row.total_cost_usd) if row.total_cost_usd else None,
+            avg_cost_usd=float(row.avg_cost_usd) if row.avg_cost_usd else None,
+            avg_quality_score=float(row.avg_quality_score) if row.avg_quality_score else None,
         )
         for row in rows
     ]

@@ -11,7 +11,7 @@ from sqlalchemy import Row, and_, case, func, or_, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from api.constants import STATUS_ERROR
-from api.models import Span, Trace
+from api.models import Span, SpanSegment, Trace
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -228,6 +228,17 @@ async def cost_by_function(
         "avg_duration_ms"
     )
 
+    quality_per_trace = (
+        select(
+            Span.trace_id,
+            func.avg(SpanSegment.influence_score).label("avg_quality"),
+        )
+        .join(SpanSegment, SpanSegment.span_id == Span.id)
+        .where(SpanSegment.influence_score.is_not(None))
+        .group_by(Span.trace_id)
+        .subquery()
+    )
+
     query = (
         select(
             Trace.function_name,
@@ -237,7 +248,9 @@ async def cost_by_function(
             func.avg(Trace.total_cost_usd).label("avg_cost_usd"),
             avg_duration,
             func.sum(case((Trace.status == STATUS_ERROR, 1), else_=0)).label("error_count"),
+            func.avg(quality_per_trace.c.avg_quality).label("avg_quality_score"),
         )
+        .outerjoin(quality_per_trace, quality_per_trace.c.trace_id == Trace.id)
         .where(Trace.org_id == org_id)
         .group_by(Trace.function_name)
         .order_by(func.sum(Trace.total_cost_usd).desc().nulls_last())
@@ -249,6 +262,63 @@ async def cost_by_function(
         query = query.where(Trace.started_at <= _to_naive_utc(started_before))
     if environment:
         query = query.where(Trace.environment == environment)
+
+    result = await db.execute(query)
+    return list(result.all())
+
+
+async def cost_by_model(
+    db: AsyncSession,
+    org_id: str,
+    *,
+    started_after: datetime | None = None,
+    started_before: datetime | None = None,
+    environment: str | None = None,
+) -> list[Row]:
+    """Aggregate cost and token usage grouped by model name.
+
+    Queries the spans table since model is a span-level attribute.
+    Returns rows of (model, call_count, total_tokens, total_cost_usd,
+    avg_cost_usd).
+    """
+    total_tokens = func.sum(
+        func.coalesce(Span.prompt_tokens, 0) + func.coalesce(Span.completion_tokens, 0)
+    ).label("total_tokens")
+
+    quality_per_span = (
+        select(
+            SpanSegment.span_id,
+            func.avg(SpanSegment.influence_score).label("avg_quality"),
+        )
+        .where(SpanSegment.influence_score.is_not(None))
+        .group_by(SpanSegment.span_id)
+        .subquery()
+    )
+
+    query = (
+        select(
+            Span.model,
+            func.count().label("call_count"),
+            total_tokens,
+            func.sum(Span.cost_usd).label("total_cost_usd"),
+            func.avg(Span.cost_usd).label("avg_cost_usd"),
+            func.avg(quality_per_span.c.avg_quality).label("avg_quality_score"),
+        )
+        .outerjoin(quality_per_span, quality_per_span.c.span_id == Span.id)
+        .where(Span.org_id == org_id)
+        .where(Span.model.is_not(None))
+        .group_by(Span.model)
+        .order_by(func.sum(Span.cost_usd).desc().nulls_last())
+    )
+
+    if started_after:
+        query = query.where(Span.started_at >= _to_naive_utc(started_after))
+    if started_before:
+        query = query.where(Span.started_at <= _to_naive_utc(started_before))
+    if environment:
+        query = query.join(Trace, Span.trace_id == Trace.id).where(
+            Trace.environment == environment
+        )
 
     result = await db.execute(query)
     return list(result.all())

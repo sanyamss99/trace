@@ -112,6 +112,18 @@ class FunctionCostItem(BaseModel):
     avg_cost_usd: float | None
     avg_duration_ms: float | None
     error_count: int
+    avg_quality_score: float | None = None
+
+
+class ModelCostItem(BaseModel):
+    """Cost and usage aggregates for a single model."""
+
+    model: str
+    call_count: int
+    total_tokens: int | None
+    total_cost_usd: float | None
+    avg_cost_usd: float | None
+    avg_quality_score: float | None = None
 
 
 class OverviewStatsResponse(BaseModel):

@@ -2,7 +2,6 @@ import { apiFetch } from './client';
 import type {
   PaginatedTraceList,
   TraceDetail,
-  Span,
   AttributionResponse,
 } from '../types/traces';
 
@@ -18,6 +17,7 @@ export interface TraceFilters {
 
 export async function fetchTraces(
   filters: TraceFilters = {},
+  signal?: AbortSignal,
 ): Promise<PaginatedTraceList> {
   const params = new URLSearchParams();
   if (filters.limit) params.set('limit', String(filters.limit));
@@ -28,23 +28,24 @@ export async function fetchTraces(
   if (filters.started_after) params.set('started_after', filters.started_after);
   if (filters.started_before) params.set('started_before', filters.started_before);
   const qs = params.toString();
-  return apiFetch<PaginatedTraceList>(`/traces${qs ? `?${qs}` : ''}`);
+  return apiFetch<PaginatedTraceList>(`/traces${qs ? `?${qs}` : ''}`, { signal });
 }
 
-export async function fetchTrace(traceId: string): Promise<TraceDetail> {
-  return apiFetch<TraceDetail>(`/traces/${traceId}`);
-}
-
-export async function fetchSpan(spanId: string): Promise<Span> {
-  return apiFetch<Span>(`/traces/spans/${spanId}`);
+export async function fetchTrace(
+  traceId: string,
+  signal?: AbortSignal,
+): Promise<TraceDetail> {
+  return apiFetch<TraceDetail>(`/traces/${traceId}`, { signal });
 }
 
 export async function fetchAttribution(
   spanId: string,
   force = false,
+  signal?: AbortSignal,
 ): Promise<AttributionResponse> {
   const qs = force ? '?force=true' : '';
   return apiFetch<AttributionResponse>(
     `/traces/spans/${spanId}/attribution${qs}`,
+    { signal },
   );
 }

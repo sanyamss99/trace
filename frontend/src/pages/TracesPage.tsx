@@ -1,13 +1,14 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import clsx from 'clsx';
 import { useTraces } from '../hooks/useTraces';
 import { StatusBadge } from '../components/StatusBadge';
 import { Pagination } from '../components/Pagination';
+import { DateRangeFilter, type DateRange } from '../components/DateRangeFilter';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { EmptyState } from '../components/EmptyState';
-import { formatCost, formatDuration, formatTokens, formatRelativeDate } from '../utils/formatters';
+import { formatCost, formatDuration, formatTokens, formatRelativeDate, formatDate } from '../utils/formatters';
 
 export function TracesPage() {
   const navigate = useNavigate();
@@ -17,12 +18,28 @@ export function TracesPage() {
     searchParams.get('status') ?? undefined,
   );
 
+  const dateRange = useMemo<DateRange>(() => ({
+    started_after: searchParams.get('started_after') ?? undefined,
+    started_before: searchParams.get('started_before') ?? undefined,
+  }), [searchParams]);
+
+  const setDateRange = useCallback((range: DateRange) => {
+    const next = new URLSearchParams(searchParams);
+    if (range.started_after) next.set('started_after', range.started_after);
+    else next.delete('started_after');
+    if (range.started_before) next.set('started_before', range.started_before);
+    else next.delete('started_before');
+    setSearchParams(next);
+  }, [searchParams, setSearchParams]);
+
   const filters = useMemo(() => ({
     function_name: search || undefined,
     status: statusFilter,
-  }), [search, statusFilter]);
+    started_after: dateRange.started_after,
+    started_before: dateRange.started_before,
+  }), [search, statusFilter, dateRange.started_after, dateRange.started_before]);
 
-  const { traces, loading, error, hasMore, loadMore, refetch } = useTraces(filters);
+  const { traces, loading, loadingMore, error, hasMore, loadMore, refetch } = useTraces(filters);
 
   const maxDuration = Math.max(...traces.map((t) => t.duration_ms ?? 0), 1);
 
@@ -44,7 +61,7 @@ export function TracesPage() {
       <h1 className="text-text-primary text-lg font-semibold mb-6">Traces</h1>
 
       {/* Filters */}
-      <div className="flex items-center gap-3 mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
         <input
           type="text"
           placeholder="Search by function name..."
@@ -53,7 +70,7 @@ export function TracesPage() {
             setSearch(e.target.value);
             updateFilter('function_name', e.target.value || undefined);
           }}
-          className="bg-surface-secondary border border-border rounded-md px-3 py-1.5 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent transition-colors w-64"
+          className="bg-surface-secondary border border-border rounded-md px-3 py-1.5 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent transition-colors w-full sm:w-64"
         />
         <div className="flex gap-1">
           {statusOptions.map((opt) => (
@@ -64,7 +81,7 @@ export function TracesPage() {
                 updateFilter('status', opt.value);
               }}
               className={clsx(
-                'px-3 py-1 text-xs rounded-md transition-colors',
+                'px-3 py-1 text-xs rounded-md transition-colors focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none',
                 statusFilter === opt.value
                   ? 'bg-accent text-white'
                   : 'text-text-secondary hover:text-text-primary hover:bg-surface-tertiary',
@@ -73,6 +90,9 @@ export function TracesPage() {
               {opt.label}
             </button>
           ))}
+        </div>
+        <div className="sm:ml-auto">
+          <DateRangeFilter value={dateRange} onChange={setDateRange} />
         </div>
       </div>
 
@@ -123,15 +143,20 @@ export function TracesPage() {
                   {formatTokens(trace.total_tokens)}
                 </span>
 
-                <span className="text-text-muted text-xs w-20 text-right">
+                <span
+                  className="text-text-muted text-xs w-20 text-right"
+                  title={formatDate(trace.started_at)}
+                >
                   {formatRelativeDate(trace.started_at)}
                 </span>
               </div>
             ))}
           </div>
-          <Pagination hasMore={hasMore} onLoadMore={loadMore} />
+          <Pagination hasMore={hasMore} loading={loadingMore} onLoadMore={loadMore} />
         </>
       )}
     </div>
   );
 }
+
+export default TracesPage;

@@ -7,20 +7,25 @@ export function useCostByModel(filters: AnalyticsFilters = {}) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     setError(null);
     try {
-      const result = await fetchCostByModel(filters);
+      const result = await fetchCostByModel(filters, signal);
       setData(result);
     } catch (e) {
+      if ((e as Error).name === 'AbortError') return;
       setError(e as Error);
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
   }, [filters.started_after, filters.started_before, filters.environment]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    const controller = new AbortController();
+    load(controller.signal);
+    return () => controller.abort();
+  }, [load]);
 
-  return { data, loading, error, refetch: load };
+  return { data, loading, error, refetch: () => load() };
 }

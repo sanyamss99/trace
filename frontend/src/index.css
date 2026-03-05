@@ -30,27 +30,27 @@
   --raw-chart-tooltip-border: #d4d6de;
   --raw-chart-tooltip-text: #111318;
 
-  /* Logprob text tokens */
-  --raw-logprob-text-confident: #065f46;
+  /* Logprob text tokens (yellow→red heatmap) */
+  --raw-logprob-text-confident: #854d0e;
   --raw-logprob-text-medium: #92400e;
   --raw-logprob-text-uncertain: #991b1b;
 
-  /* Heatmap confident token bg (visible green tint) */
-  --raw-heatmap-confident-bg: rgba(5, 150, 105, 0.12);
-  --raw-heatmap-confident-rgb: 5, 150, 105;
+  /* Heatmap confident token bg (faint yellow tint) */
+  --raw-heatmap-confident-bg: rgba(253, 231, 37, 0.12);
+  --raw-heatmap-confident-rgb: 253, 231, 37;
 
   /* Influence tokens */
   --raw-influence-low: #8b90a0;
   --raw-influence-mid: #4b5063;
-  --raw-influence-high-label: #6366f1;
+  --raw-influence-high-label: #dc2626;
 
-  /* Segment highlight backgrounds — cool→warm spectrum */
+  /* Segment highlight backgrounds — yellow→orange→red */
   --raw-segment-bg-none: #eaeaf2;
-  --raw-segment-bg-cool: #dbeafe;
-  --raw-segment-bg-mid: #dcfce7;
-  --raw-segment-bg-warm: #fee2e2;
+  --raw-segment-bg-cool: #fef9c3;
+  --raw-segment-bg-mid: #fed7aa;
+  --raw-segment-bg-warm: #fecaca;
   --raw-segment-bg-hover-none: #dddee8;
-  --raw-segment-border-cool: #3b82f6;
+  --raw-segment-border-cool: #eab308;
   --raw-segment-border-warm: #ef4444;
 }
 
@@ -84,27 +84,27 @@
   --raw-chart-tooltip-border: #2a2d3a;
   --raw-chart-tooltip-text: #e8eaf0;
 
-  /* Logprob text tokens */
-  --raw-logprob-text-confident: #6ee7b7;
+  /* Logprob text tokens (yellow→red heatmap) */
+  --raw-logprob-text-confident: #fef9c3;
   --raw-logprob-text-medium: #fbbf24;
   --raw-logprob-text-uncertain: #fca5a5;
 
-  /* Heatmap confident token bg (visible green tint) */
-  --raw-heatmap-confident-bg: rgba(52, 211, 153, 0.15);
-  --raw-heatmap-confident-rgb: 52, 211, 153;
+  /* Heatmap confident token bg (faint yellow tint) */
+  --raw-heatmap-confident-bg: rgba(253, 231, 37, 0.15);
+  --raw-heatmap-confident-rgb: 253, 231, 37;
 
   /* Influence tokens */
   --raw-influence-low: #5c6180;
   --raw-influence-mid: #9499ad;
-  --raw-influence-high-label: #a5b4fc;
+  --raw-influence-high-label: #f87171;
 
-  /* Segment highlight backgrounds — cool→warm spectrum */
+  /* Segment highlight backgrounds — yellow→orange→red */
   --raw-segment-bg-none: #181a28;
-  --raw-segment-bg-cool: #172554;
-  --raw-segment-bg-mid: #14532d;
-  --raw-segment-bg-warm: #541414;
+  --raw-segment-bg-cool: #352a04;
+  --raw-segment-bg-mid: #3b1f06;
+  --raw-segment-bg-warm: #450a0a;
   --raw-segment-bg-hover-none: #1e2038;
-  --raw-segment-border-cool: #60a5fa;
+  --raw-segment-border-cool: #facc15;
   --raw-segment-border-warm: #f87171;
 }
 

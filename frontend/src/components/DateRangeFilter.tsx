@@ -52,7 +52,7 @@ export function DateRangeFilter({ value, onChange }: DateRangeFilterProps) {
             key={p.key}
             onClick={() => handlePreset(p.key)}
             className={clsx(
-              'px-3 py-1 text-xs rounded-md transition-colors',
+              'px-3 py-1 text-xs rounded-md transition-colors focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none',
               activePreset === p.key
                 ? 'bg-accent text-white'
                 : 'text-text-secondary hover:text-text-primary hover:bg-surface-tertiary',

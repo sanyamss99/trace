@@ -1,0 +1,16 @@
+{
+  "name": "Trace",
+  "short_name": "Trace",
+  "description": "Real-time causal debugger for LLM applications",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0b10",
+  "theme_color": "#6366f1",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

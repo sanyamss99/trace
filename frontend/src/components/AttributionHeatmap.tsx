@@ -1,5 +1,5 @@
 import { useMemo, useState, useCallback, useRef } from 'react';
-import { logprobToColor, logprobToTextColor, cssVar } from '../utils/colors';
+import { logprobToColor, logprobToTextColor } from '../utils/colors';
 import type { LogprobEntry } from '../types/traces';
 
 interface AttributionHeatmapProps {
@@ -62,11 +62,11 @@ export function AttributionHeatmap({ logprobs }: AttributionHeatmapProps) {
       <div className="flex items-center gap-4 mb-3">
         <span className="text-text-muted text-xs">Confidence:</span>
         <div className="flex items-center gap-1">
+          <span className="text-text-muted text-xs mr-1">high</span>
           <div className="w-16 h-2 rounded-full" style={{
-            background: `linear-gradient(to right, transparent, rgba(${cssVar('--raw-warning-rgb') || '245, 158, 11'}, 0.5), ${cssVar('--raw-error') || '#ef4444'})`,
+            background: 'linear-gradient(to right, #fde725, #f59e0b, #ef4444)',
           }} />
-          <span className="text-text-muted text-xs ml-1">confident</span>
-          <span className="text-text-muted text-xs ml-auto">uncertain</span>
+          <span className="text-text-muted text-xs ml-1">low</span>
         </div>
       </div>
 

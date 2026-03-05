@@ -70,7 +70,7 @@ def create_app() -> FastAPI:
         allow_origins=[o.strip() for o in settings.cors_origins.split(",")],
         allow_credentials=True,
         allow_methods=["GET", "POST", "DELETE"],
-        allow_headers=["X-Trace-Key", "Content-Type", "Accept"],
+        allow_headers=["X-Trace-Key", "Content-Type", "Accept", "Authorization"],
     )
 
     application.include_router(api_router)

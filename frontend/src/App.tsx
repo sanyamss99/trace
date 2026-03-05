@@ -1,11 +1,11 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
 import { useApiKey } from './hooks/useApiKey';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Layout } from './components/Layout';
-import { ApiKeySetup } from './components/ApiKeySetup';
+import { LoginPage } from './pages/LoginPage';
 import { LoadingSpinner } from './components/LoadingSpinner';
 
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
@@ -14,11 +14,29 @@ const TraceDetailPage = lazy(() => import('./pages/TraceDetailPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
+function OAuthCallbackHandler() {
+  const { setJwtToken } = useApiKey();
+
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash.startsWith('#token=')) {
+      const token = hash.slice('#token='.length);
+      if (token) {
+        setJwtToken(token);
+        // Clean the hash from URL
+        window.history.replaceState(null, '', window.location.pathname);
+      }
+    }
+  }, [setJwtToken]);
+
+  return null;
+}
+
 function AuthGate() {
   const { apiKey } = useApiKey();
 
   if (!apiKey) {
-    return <ApiKeySetup />;
+    return <LoginPage />;
   }
 
   return (
@@ -42,6 +60,7 @@ export function App() {
       <ErrorBoundary>
         <BrowserRouter>
           <AuthProvider>
+            <OAuthCallbackHandler />
             <Routes>
               <Route path="/*" element={<AuthGate />} />
             </Routes>

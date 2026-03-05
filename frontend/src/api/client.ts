@@ -14,23 +14,28 @@ export class ApiError extends Error {
   }
 }
 
-function getApiKey(): string | null {
-  return localStorage.getItem('trace_api_key');
+function getAuthHeaders(): Record<string, string> {
+  const authType = localStorage.getItem('trace_auth_type');
+  if (authType === 'jwt') {
+    const token = localStorage.getItem('trace_jwt');
+    if (token) return { Authorization: `Bearer ${token}` };
+  }
+  // Fall back to API key (also handles legacy case with no auth_type set)
+  const apiKey = localStorage.getItem('trace_api_key');
+  if (apiKey) return { 'X-Trace-Key': apiKey };
+  return {};
 }
 
 export async function apiFetch<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
-  const apiKey = getApiKey();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     Accept: 'application/json',
+    ...getAuthHeaders(),
     ...((options.headers as Record<string, string>) ?? {}),
   };
-  if (apiKey) {
-    headers['X-Trace-Key'] = apiKey;
-  }
 
   const res = await fetch(`${BASE_URL}${path}`, {
     ...options,

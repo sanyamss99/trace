@@ -18,7 +18,14 @@ RUN npm run build
 FROM nginx:alpine
 
 COPY --from=build /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx.conf /etc/nginx/templates/default.conf.template
+
+# Only substitute API_URL, leave nginx variables ($uri, $host, etc.) untouched
+ENV NGINX_ENVSUBST_OUTPUT_DIR=/etc/nginx/conf.d
+ENV NGINX_ENVSUBST_FILTER=API_URL
+
+# Default API_URL for docker-compose; override on Railway
+ENV API_URL=http://api:8000
 
 EXPOSE 80
 

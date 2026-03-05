@@ -9,14 +9,6 @@ export function cssVar(name: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 }
 
-function accentRgb(): string {
-  return cssVar('--raw-accent-rgb') || '99, 102, 241';
-}
-
-function warningRgb(): string {
-  return cssVar('--raw-warning-rgb') || '245, 158, 11';
-}
-
 function hexToRgb(hex: string): [number, number, number] {
   const h = hex.replace('#', '');
   return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
@@ -31,48 +23,61 @@ function lerpColor(a: string, b: string, t: number): string {
   return `rgb(${r}, ${g}, ${bl})`;
 }
 
-// Logprob color scale: confident (transparent) -> uncertain (amber) -> very uncertain (red)
-// Logprobs are negative: 0 = most confident, -inf = least confident
-// We map [-4, 0] range — anything below -4 is clamped to max uncertainty
-function makeUncertaintyScale() {
-  return scaleSequential<string>()
-    .domain([0, -4])
-    .interpolator(
-      interpolateRgb(
-        `rgba(${accentRgb()}, 0)`,
-        cssVar('--raw-error') || '#ef4444',
-      ),
-    );
-}
-
-export function logprobToColor(logprob: number): string {
-  if (logprob > -0.1) {
-    // Confident — visible green tint instead of invisible transparent
-    return cssVar('--raw-heatmap-confident-bg') || 'rgba(5, 150, 105, 0.12)';
-  }
-  if (logprob > -2.0) {
-    // Medium uncertainty — amber range, boosted alpha for visibility
-    const t = (logprob + 0.1) / (-2.0 + 0.1);
-    const alpha = 0.30 + t * 0.40;
-    return `rgba(${warningRgb()}, ${alpha})`;
-  }
-  // High uncertainty — red range
-  return makeUncertaintyScale()(Math.max(logprob, -4));
-}
-
-export function logprobToTextColor(logprob: number): string {
-  if (logprob > -0.1) return cssVar('--raw-logprob-text-confident') || '#e8eaf0';
-  if (logprob > -2.0) return cssVar('--raw-logprob-text-medium') || '#fbbf24';
-  return cssVar('--raw-logprob-text-uncertain') || '#fca5a5';
-}
-
 // 3-stop interpolation: a → b → c over t ∈ [0, 1]
 function lerpColor3(a: string, b: string, c: string, t: number): string {
   if (t <= 0.5) return lerpColor(a, b, t * 2);
   return lerpColor(b, c, (t - 0.5) * 2);
 }
 
-// Influence-based segment coloring — cool→warm spectrum for clear differentiation
+// ── Yellow → Orange → Red heatmap ──
+const HEAT_YELLOW = '#fde725';
+const HEAT_ORANGE = '#f59e0b';
+const HEAT_RED    = '#ef4444';
+
+function heatmapColor(t: number): string {
+  return lerpColor3(HEAT_YELLOW, HEAT_ORANGE, HEAT_RED, Math.max(0, Math.min(1, t)));
+}
+
+function heatmapAlpha(t: number, alpha: number): string {
+  const clamped = Math.max(0, Math.min(1, t));
+  const color = lerpColor3(HEAT_YELLOW, HEAT_ORANGE, HEAT_RED, clamped);
+  // Extract rgb values from "rgb(r, g, b)" string
+  const match = color.match(/rgb\((\d+), (\d+), (\d+)\)/);
+  if (!match) return color;
+  return `rgba(${match[1]}, ${match[2]}, ${match[3]}, ${alpha})`;
+}
+
+// Logprob color scale: confident (faint yellow) → uncertain (orange) → very uncertain (red)
+// Logprobs are negative: 0 = most confident, -inf = least confident
+// We map [-4, 0] range — anything below -4 is clamped to max uncertainty
+function makeUncertaintyScale() {
+  return scaleSequential<string>()
+    .domain([0, -4])
+    .interpolator(interpolateRgb(HEAT_YELLOW, HEAT_RED));
+}
+
+export function logprobToColor(logprob: number): string {
+  if (logprob > -0.1) {
+    // Confident — faint yellow tint
+    return cssVar('--raw-heatmap-confident-bg') || 'rgba(253, 231, 37, 0.12)';
+  }
+  if (logprob > -2.0) {
+    // Medium uncertainty — yellow→orange range
+    const t = (logprob + 0.1) / (-2.0 + 0.1);
+    const alpha = 0.30 + t * 0.40;
+    return heatmapAlpha(t * 0.5, alpha);
+  }
+  // High uncertainty — orange→red range
+  return makeUncertaintyScale()(Math.max(logprob, -4));
+}
+
+export function logprobToTextColor(logprob: number): string {
+  if (logprob > -0.1) return cssVar('--raw-logprob-text-confident') || '#fef9c3';
+  if (logprob > -2.0) return cssVar('--raw-logprob-text-medium') || '#fbbf24';
+  return cssVar('--raw-logprob-text-uncertain') || '#fca5a5';
+}
+
+// Influence-based segment coloring — yellow→orange→red spectrum
 export function segmentBgColor(influence: number | null, hovered = false): string {
   const score = influence ?? 0;
   if (score < 0.05) {
@@ -80,9 +85,9 @@ export function segmentBgColor(influence: number | null, hovered = false): strin
       ? (cssVar('--raw-segment-bg-hover-none') || '#1e2038')
       : (cssVar('--raw-segment-bg-none') || '#181a28');
   }
-  const cool = cssVar('--raw-segment-bg-cool') || '#172554';
-  const mid = cssVar('--raw-segment-bg-mid') || '#14532d';
-  const warm = cssVar('--raw-segment-bg-warm') || '#541414';
+  const cool = cssVar('--raw-segment-bg-cool') || '#352a04';
+  const mid = cssVar('--raw-segment-bg-mid') || '#3b1f06';
+  const warm = cssVar('--raw-segment-bg-warm') || '#450a0a';
   const t = Math.sqrt(Math.min(score, 1));
   const base = lerpColor3(cool, mid, warm, t);
   if (!hovered) return base;
@@ -92,20 +97,16 @@ export function segmentBgColor(influence: number | null, hovered = false): strin
 export function segmentBorderColor(influence: number | null): string {
   const score = influence ?? 0;
   if (score < 0.05) return cssVar('--raw-influence-low') || '#505468';
-  const cool = cssVar('--raw-segment-border-cool') || '#60a5fa';
-  const warm = cssVar('--raw-segment-border-warm') || '#f87171';
   const t = Math.sqrt(Math.min(score, 1));
+  const cool = cssVar('--raw-segment-border-cool') || HEAT_YELLOW;
+  const warm = cssVar('--raw-segment-border-warm') || HEAT_RED;
   return lerpColor(cool, warm, t);
 }
 
-// Score bar color — semantic: low=muted, medium=accent-muted, high=bright accent
+// Score bar color — yellow→orange→red for low/medium/high
 export function scoreBarColor(score: number): string {
-  const low = cssVar('--raw-influence-low') || '#505468';
-  const accent = cssVar('--raw-accent') || '#6366f1';
-  if (score < 0.1) return low;
-  if (score < 0.3) return `${accent}80`;
-  if (score < 0.6) return `${accent}b3`;
-  return accent;
+  if (score < 0.1) return cssVar('--raw-influence-low') || '#505468';
+  return heatmapColor(Math.sqrt(score));
 }
 
 // Categorical colors — only for legend dots to distinguish segments by name
@@ -125,9 +126,6 @@ export const SEGMENT_COLORS = [
 
 export function influenceToColor(score: number | null): string {
   const low = cssVar('--raw-influence-low') || '#505468';
-  const mid = cssVar('--raw-influence-mid') || '#8b90a0';
-  const accent = cssVar('--raw-accent') || '#6366f1';
   if (score == null || score < 0.2) return low;
-  if (score < 0.5) return mid;
-  return accent;
+  return heatmapColor(Math.sqrt(score));
 }

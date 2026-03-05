@@ -78,7 +78,7 @@ export function TraceDetailPage() {
 
         {/* Detail panel */}
         {selectedSpan && (
-          <div className="w-[45%] shrink-0">
+          <div className="fixed inset-0 z-30 bg-surface-primary md:relative md:inset-auto md:z-auto md:bg-transparent md:w-[45%] md:shrink-0">
             <SpanDetailPanel
               span={selectedSpan}
               onClose={() => setSelectedSpan(null)}
@@ -89,3 +89,5 @@ export function TraceDetailPage() {
     </div>
   );
 }
+
+export default TraceDetailPage;

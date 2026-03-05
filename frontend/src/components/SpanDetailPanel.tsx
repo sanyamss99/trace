@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import clsx from 'clsx';
 import { useAttribution } from '../hooks/useAttribution';
 import { SegmentHighlight } from './SegmentHighlight';
@@ -15,10 +15,30 @@ interface SpanDetailPanelProps {
   onClose: () => void;
 }
 
+const JSON_TRUNCATE_THRESHOLD = 10_240; // 10 KB
+
 export function SpanDetailPanel({ span, onClose }: SpanDetailPanelProps) {
   const isLlm = span.span_type === 'llm';
   const [tab, setTab] = useState<Tab>(isLlm ? 'prompt' : 'io');
   const attribution = useAttribution();
+  const [showFullInput, setShowFullInput] = useState(false);
+  const [showFullOutput, setShowFullOutput] = useState(false);
+  const [prevSpanId, setPrevSpanId] = useState(span.id);
+
+  if (prevSpanId !== span.id) {
+    setPrevSpanId(span.id);
+    setShowFullInput(false);
+    setShowFullOutput(false);
+  }
+
+  const inputJson = useMemo(
+    () => (span.input_locals ? JSON.stringify(span.input_locals, null, 2) : null),
+    [span.input_locals],
+  );
+  const outputJson = useMemo(
+    () => (span.output != null ? JSON.stringify(span.output, null, 2) : null),
+    [span.output],
+  );
 
   useEffect(() => {
     if (isLlm) {
@@ -52,7 +72,8 @@ export function SpanDetailPanel({ span, onClose }: SpanDetailPanelProps) {
         </span>
         <button
           onClick={onClose}
-          className="text-text-muted hover:text-text-primary text-sm transition-colors ml-2 shrink-0"
+          aria-label="Close detail panel"
+          className="text-text-muted hover:text-text-primary text-sm transition-colors ml-2 shrink-0 focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none rounded"
         >
           &#10005;
         </button>
@@ -67,7 +88,7 @@ export function SpanDetailPanel({ span, onClose }: SpanDetailPanelProps) {
               key={t.key}
               onClick={() => setTab(t.key)}
               className={clsx(
-                'px-2.5 py-1 text-xs rounded transition-colors',
+                'px-2.5 py-1 text-xs rounded transition-colors focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none',
                 tab === t.key
                   ? 'text-accent bg-accent-subtle'
                   : 'text-text-muted hover:text-text-secondary',
@@ -137,18 +158,38 @@ export function SpanDetailPanel({ span, onClose }: SpanDetailPanelProps) {
             <div>
               <h3 className="text-text-secondary text-xs font-medium mb-2">Input</h3>
               <pre className="font-mono text-xs text-text-secondary bg-surface-tertiary rounded-md p-3 overflow-x-auto whitespace-pre-wrap">
-                {span.input_locals
-                  ? JSON.stringify(span.input_locals, null, 2)
+                {inputJson
+                  ? (inputJson.length > JSON_TRUNCATE_THRESHOLD && !showFullInput
+                    ? inputJson.slice(0, JSON_TRUNCATE_THRESHOLD) + '\n…'
+                    : inputJson)
                   : '—'}
               </pre>
+              {inputJson && inputJson.length > JSON_TRUNCATE_THRESHOLD && (
+                <button
+                  onClick={() => setShowFullInput((v) => !v)}
+                  className="text-xs text-accent hover:text-accent/80 mt-1 transition-colors"
+                >
+                  {showFullInput ? 'Show less' : `Show full (${(inputJson.length / 1024).toFixed(1)} KB)`}
+                </button>
+              )}
             </div>
             <div>
               <h3 className="text-text-secondary text-xs font-medium mb-2">Output</h3>
               <pre className="font-mono text-xs text-text-secondary bg-surface-tertiary rounded-md p-3 overflow-x-auto whitespace-pre-wrap">
-                {span.output != null
-                  ? JSON.stringify(span.output, null, 2)
+                {outputJson
+                  ? (outputJson.length > JSON_TRUNCATE_THRESHOLD && !showFullOutput
+                    ? outputJson.slice(0, JSON_TRUNCATE_THRESHOLD) + '\n…'
+                    : outputJson)
                   : '—'}
               </pre>
+              {outputJson && outputJson.length > JSON_TRUNCATE_THRESHOLD && (
+                <button
+                  onClick={() => setShowFullOutput((v) => !v)}
+                  className="text-xs text-accent hover:text-accent/80 mt-1 transition-colors"
+                >
+                  {showFullOutput ? 'Show less' : `Show full (${(outputJson.length / 1024).toFixed(1)} KB)`}
+                </button>
+              )}
             </div>
             {span.error && (
               <div>

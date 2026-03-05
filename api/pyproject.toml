@@ -12,7 +12,6 @@ dependencies = [
 
     "asyncpg>=0.30.0",
     "alembic>=1.13.0",
-    "usetrace",
 ]
 
 [project.optional-dependencies]

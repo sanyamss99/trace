@@ -12,7 +12,7 @@ export function Pagination({ hasMore, loading, onLoadMore }: PaginationProps) {
       <button
         onClick={onLoadMore}
         disabled={loading}
-        className="text-sm text-text-secondary hover:text-text-primary transition-colors disabled:opacity-50"
+        className="text-sm text-text-secondary hover:text-text-primary transition-colors disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none rounded"
       >
         {loading ? 'Loading...' : 'Load more'}
       </button>

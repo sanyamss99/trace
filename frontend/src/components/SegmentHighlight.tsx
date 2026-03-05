@@ -105,7 +105,7 @@ export function SegmentHighlight({ promptText, segments }: SegmentHighlightProps
                 style={{
                   backgroundColor: segmentBgColor(influence),
                   color: influence > 0.3
-                    ? (cssVar('--raw-influence-high-label') || '#a5b4fc')
+                    ? (cssVar('--raw-influence-high-label') || '#f87171')
                     : (cssVar('--raw-influence-mid') || '#8b90a0'),
                 }}
               >
@@ -118,13 +118,12 @@ export function SegmentHighlight({ promptText, segments }: SegmentHighlightProps
 
       {/* Influence scale hint */}
       <div className="flex items-center gap-2 mb-3">
-        <span className="text-text-muted text-xs">Highlight color = output influence</span>
-        <div className="flex items-center gap-0.5">
-          <div className="w-4 h-2 rounded-sm" style={{ backgroundColor: cssVar('--raw-segment-bg-cool') || '#172554' }} />
-          <div className="w-4 h-2 rounded-sm" style={{ backgroundColor: cssVar('--raw-segment-bg-mid') || '#14532d' }} />
-          <div className="w-4 h-2 rounded-sm" style={{ backgroundColor: cssVar('--raw-segment-bg-warm') || '#541414' }} />
-        </div>
-        <span className="text-text-muted text-xs">low → high</span>
+        <span className="text-text-muted text-xs">Influence:</span>
+        <span className="text-text-muted text-xs">low</span>
+        <div className="w-16 h-2 rounded-full" style={{
+          background: 'linear-gradient(to right, #fde725, #f59e0b, #ef4444)',
+        }} />
+        <span className="text-text-muted text-xs">high</span>
       </div>
 
       {/* Text with influence-based highlights */}

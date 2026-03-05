@@ -9,7 +9,7 @@ export function ErrorMessage({ error, onRetry }: ErrorMessageProps) {
   const isAuthError = (error as ApiError).status === 401;
 
   return (
-    <div className="bg-error-subtle border border-error/20 rounded-md p-4">
+    <div role="alert" className="bg-error-subtle border border-error/20 rounded-md p-4">
       <p className="text-error font-mono text-sm">{error.message}</p>
       {isAuthError && (
         <p className="text-text-secondary text-sm mt-2">
@@ -19,7 +19,7 @@ export function ErrorMessage({ error, onRetry }: ErrorMessageProps) {
       {onRetry && (
         <button
           onClick={onRetry}
-          className="mt-3 text-sm text-accent hover:text-accent/80 transition-colors"
+          className="mt-3 text-sm text-accent hover:text-accent/80 transition-colors focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
         >
           Retry
         </button>

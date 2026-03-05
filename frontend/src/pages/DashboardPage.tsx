@@ -1,19 +1,38 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { DateRangeFilter, type DateRange } from '../components/DateRangeFilter';
 import { StatCard } from '../components/StatCard';
 import { TimeseriesChart } from '../components/TimeseriesChart';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { EmptyState } from '../components/EmptyState';
+import { OnboardingBanner } from '../components/OnboardingBanner';
 import { useOverviewStats } from '../hooks/useOverviewStats';
 import { useTimeseries } from '../hooks/useTimeseries';
 import { useCostByFunction } from '../hooks/useCostByFunction';
 import { useCostByModel } from '../hooks/useCostByModel';
+import { Tooltip } from '../components/Tooltip';
+import { CostDonutChart } from '../components/CostDonutChart';
 import { formatCost, formatDuration, formatPercent, formatTokens } from '../utils/formatters';
 import type { FunctionCostItem, ModelCostItem } from '../types/analytics';
 
 export function DashboardPage() {
-  const [dateRange, setDateRange] = useState<DateRange>({});
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const dateRange = useMemo<DateRange>(() => ({
+    started_after: searchParams.get('started_after') ?? undefined,
+    started_before: searchParams.get('started_before') ?? undefined,
+  }), [searchParams]);
+
+  const setDateRange = useCallback((range: DateRange) => {
+    const next = new URLSearchParams(searchParams);
+    if (range.started_after) next.set('started_after', range.started_after);
+    else next.delete('started_after');
+    if (range.started_before) next.set('started_before', range.started_before);
+    else next.delete('started_before');
+    setSearchParams(next);
+  }, [searchParams, setSearchParams]);
+
   const filters = useMemo(() => ({
     started_after: dateRange.started_after,
     started_before: dateRange.started_before,
@@ -31,15 +50,18 @@ export function DashboardPage() {
         <DateRangeFilter value={dateRange} onChange={setDateRange} />
       </div>
 
+      {stats.data?.trace_count === 0 && <OnboardingBanner />}
+
       {/* Stat cards */}
       {stats.error ? (
         <ErrorMessage error={stats.error} onRetry={stats.refetch} />
       ) : stats.loading ? (
         <div className="py-8"><LoadingSpinner /></div>
       ) : stats.data ? (
-        <div className="grid grid-cols-4 gap-8 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 md:gap-8 mb-8">
           <StatCard label="Traces" value={String(stats.data.trace_count)} />
           <StatCard label="Total Cost" value={formatCost(stats.data.total_cost_usd)} />
+          <StatCard label="Total Tokens" value={formatTokens(stats.data.total_tokens)} />
           <StatCard label="Avg Latency" value={formatDuration(stats.data.avg_duration_ms)} />
           <StatCard
             label="Error Rate"
@@ -63,6 +85,14 @@ export function DashboardPage() {
         )}
       </div>
 
+      {/* Cost by model donut */}
+      {costByModel.data.length > 0 && (
+        <div className="bg-surface-secondary border border-border rounded-lg p-5 mb-8">
+          <h2 className="text-text-primary text-sm font-medium mb-4">Cost Distribution by Model</h2>
+          <CostDonutChart data={costByModel.data} />
+        </div>
+      )}
+
       {/* Cost by function */}
       <div className="bg-surface-secondary border border-border rounded-lg p-5">
         <h2 className="text-text-primary text-sm font-medium mb-4">Cost by Function</h2>
@@ -73,7 +103,9 @@ export function DashboardPage() {
         ) : costByFn.data.length === 0 ? (
           <EmptyState message="No function data yet." action="Send your first trace using the SDK." />
         ) : (
-          <CostTable data={costByFn.data} />
+          <div className="overflow-x-auto">
+            <CostTable data={costByFn.data} />
+          </div>
         )}
       </div>
 
@@ -87,7 +119,9 @@ export function DashboardPage() {
         ) : costByModel.data.length === 0 ? (
           <EmptyState message="No model data yet." action="Send your first trace using the SDK." />
         ) : (
-          <ModelCostTable data={costByModel.data} />
+          <div className="overflow-x-auto">
+            <ModelCostTable data={costByModel.data} />
+          </div>
         )}
       </div>
     </div>
@@ -113,7 +147,7 @@ function SortHeader({
   return (
     <button
       onClick={onToggle}
-      className={`cursor-pointer select-none transition-colors ${
+      className={`cursor-pointer select-none transition-colors focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none rounded ${
         align === 'right' ? 'text-right ml-auto' : ''
       } ${active ? 'text-text-primary' : 'text-text-muted hover:text-text-secondary'}`}
     >
@@ -163,7 +197,9 @@ function CostTable({ data }: { data: FunctionCostItem[] }) {
         <SortHeader label="Total Cost" align="right" active={sortKey === 'total_cost_usd'} dir={sortDir} onToggle={() => toggle('total_cost_usd')} />
         <SortHeader label="Avg Cost" align="right" active={sortKey === 'avg_cost_usd'} dir={sortDir} onToggle={() => toggle('avg_cost_usd')} />
         <SortHeader label="Avg Latency" align="right" active={sortKey === 'avg_duration_ms'} dir={sortDir} onToggle={() => toggle('avg_duration_ms')} />
-        <SortHeader label="Avg Quality" align="right" active={sortKey === 'avg_quality_score'} dir={sortDir} onToggle={() => toggle('avg_quality_score')} />
+        <Tooltip text="Average quality score across all calls">
+          <SortHeader label="Avg Quality" align="right" active={sortKey === 'avg_quality_score'} dir={sortDir} onToggle={() => toggle('avg_quality_score')} />
+        </Tooltip>
         <SortHeader label="Errors" align="right" active={sortKey === 'error_count'} dir={sortDir} onToggle={() => toggle('error_count')} />
       </div>
       {rows.map((item) => {
@@ -175,9 +211,12 @@ function CostTable({ data }: { data: FunctionCostItem[] }) {
             className="grid grid-cols-[1fr_80px_80px_80px_80px_80px_60px] gap-4 items-center py-2 text-sm"
           >
             <div className="flex items-center gap-3">
-              <span className="font-mono text-text-primary text-xs truncate">
+              <Link
+                to={`/traces?function_name=${encodeURIComponent(item.function_name)}`}
+                className="font-mono text-accent text-xs truncate hover:underline"
+              >
                 {item.function_name}
-              </span>
+              </Link>
               <div className="h-1 flex-1 max-w-[40px] bg-surface-tertiary rounded-full overflow-hidden">
                 <div
                   className="h-full bg-accent/40 rounded-full"
@@ -230,7 +269,9 @@ function ModelCostTable({ data }: { data: ModelCostItem[] }) {
         <SortHeader label="Total Tokens" align="right" active={sortKey === 'total_tokens'} dir={sortDir} onToggle={() => toggle('total_tokens')} />
         <SortHeader label="Total Cost" align="right" active={sortKey === 'total_cost_usd'} dir={sortDir} onToggle={() => toggle('total_cost_usd')} />
         <SortHeader label="Avg Cost" align="right" active={sortKey === 'avg_cost_usd'} dir={sortDir} onToggle={() => toggle('avg_cost_usd')} />
-        <SortHeader label="Avg Quality" align="right" active={sortKey === 'avg_quality_score'} dir={sortDir} onToggle={() => toggle('avg_quality_score')} />
+        <Tooltip text="Average quality score across all calls">
+          <SortHeader label="Avg Quality" align="right" active={sortKey === 'avg_quality_score'} dir={sortDir} onToggle={() => toggle('avg_quality_score')} />
+        </Tooltip>
       </div>
       {rows.map((item) => {
         const costRatio = (item.total_cost_usd ?? 0) / maxCost;
@@ -271,3 +312,5 @@ function ModelCostTable({ data }: { data: ModelCostItem[] }) {
     </div>
   );
 }
+
+export default DashboardPage;

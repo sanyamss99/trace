@@ -8,7 +8,8 @@ function ThemeToggle() {
   return (
     <button
       onClick={toggle}
-      className="flex items-center gap-1.5 px-2 py-1 rounded text-text-secondary hover:text-text-primary hover:bg-surface-tertiary transition-colors text-xs"
+      aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+      className="flex items-center gap-1.5 px-2 py-1 rounded text-text-secondary hover:text-text-primary hover:bg-surface-tertiary transition-colors text-xs focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
       title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
     >
       {theme === 'light' ? (
@@ -29,12 +30,18 @@ function ThemeToggle() {
 export function Layout() {
   return (
     <div className="min-h-screen bg-surface-primary">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:bg-accent focus:text-white focus:rounded-md focus:text-sm"
+      >
+        Skip to main content
+      </a>
       <Sidebar />
-      <div className="ml-14 flex flex-col">
-        <header className="flex items-center justify-end px-6 py-2 border-b border-border">
+      <div className="md:ml-14 flex flex-col">
+        <header className="flex items-center justify-end pl-14 md:pl-6 pr-6 py-2 border-b border-border">
           <ThemeToggle />
         </header>
-        <main className="p-6">
+        <main id="main-content" className="p-6">
           <Outlet />
         </main>
       </div>

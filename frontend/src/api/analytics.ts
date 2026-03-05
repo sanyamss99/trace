@@ -23,32 +23,40 @@ function buildQuery(filters: AnalyticsFilters): string {
 
 export async function fetchOverview(
   filters: AnalyticsFilters = {},
+  signal?: AbortSignal,
 ): Promise<OverviewStats> {
   return apiFetch<OverviewStats>(
     `/traces/analytics/overview${buildQuery(filters)}`,
+    { signal },
   );
 }
 
 export async function fetchTimeseries(
   filters: AnalyticsFilters = {},
+  signal?: AbortSignal,
 ): Promise<TimeSeriesPoint[]> {
   return apiFetch<TimeSeriesPoint[]>(
     `/traces/analytics/timeseries${buildQuery(filters)}`,
+    { signal },
   );
 }
 
 export async function fetchCostByFunction(
   filters: AnalyticsFilters = {},
+  signal?: AbortSignal,
 ): Promise<FunctionCostItem[]> {
   return apiFetch<FunctionCostItem[]>(
     `/traces/analytics/cost-by-function${buildQuery(filters)}`,
+    { signal },
   );
 }
 
 export async function fetchCostByModel(
   filters: AnalyticsFilters = {},
+  signal?: AbortSignal,
 ): Promise<ModelCostItem[]> {
   return apiFetch<ModelCostItem[]>(
     `/traces/analytics/cost-by-model${buildQuery(filters)}`,
+    { signal },
   );
 }

@@ -12,6 +12,8 @@ export function SettingsPage() {
   const [createdKey, setCreatedKey] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [confirmingDisconnect, setConfirmingDisconnect] = useState(false);
+  const [confirmingRevokeId, setConfirmingRevokeId] = useState<string | null>(null);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -47,12 +49,30 @@ export function SettingsPage() {
             {apiKey ? `${apiKey.slice(0, 8)}${'*'.repeat(12)}` : 'Not connected'}
           </span>
           {apiKey && (
-            <button
-              onClick={clearApiKey}
-              className="text-xs text-text-muted hover:text-error transition-colors"
-            >
-              Disconnect
-            </button>
+            confirmingDisconnect ? (
+              <span className="flex items-center gap-2 text-xs">
+                <span className="text-text-secondary">Disconnect?</span>
+                <button
+                  onClick={() => { clearApiKey(); setConfirmingDisconnect(false); }}
+                  className="text-error hover:text-error/80 transition-colors font-medium"
+                >
+                  Yes
+                </button>
+                <button
+                  onClick={() => setConfirmingDisconnect(false)}
+                  className="text-text-muted hover:text-text-secondary transition-colors"
+                >
+                  Cancel
+                </button>
+              </span>
+            ) : (
+              <button
+                onClick={() => setConfirmingDisconnect(true)}
+                className="text-xs text-text-muted hover:text-error transition-colors"
+              >
+                Disconnect
+              </button>
+            )
           )}
         </div>
       </div>
@@ -127,12 +147,30 @@ export function SettingsPage() {
                   </div>
                 </div>
                 {!key.revoked_at && (
-                  <button
-                    onClick={() => revoke(key.id)}
-                    className="text-xs text-text-muted hover:text-error transition-colors"
-                  >
-                    Revoke
-                  </button>
+                  confirmingRevokeId === key.id ? (
+                    <span className="flex items-center gap-2 text-xs">
+                      <span className="text-text-secondary">Revoke?</span>
+                      <button
+                        onClick={() => { revoke(key.id); setConfirmingRevokeId(null); }}
+                        className="text-error hover:text-error/80 transition-colors font-medium"
+                      >
+                        Yes
+                      </button>
+                      <button
+                        onClick={() => setConfirmingRevokeId(null)}
+                        className="text-text-muted hover:text-text-secondary transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmingRevokeId(key.id)}
+                      className="text-xs text-text-muted hover:text-error transition-colors"
+                    >
+                      Revoke
+                    </button>
+                  )
                 )}
                 {key.revoked_at && (
                   <span className="text-xs text-text-muted">Revoked</span>
@@ -145,3 +183,5 @@ export function SettingsPage() {
     </div>
   );
 }
+
+export default SettingsPage;

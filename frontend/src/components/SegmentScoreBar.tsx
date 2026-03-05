@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import clsx from 'clsx';
 import { scoreBarColor, SEGMENT_DOT_COLORS } from '../utils/colors';
+import { Tooltip } from './Tooltip';
 import type { SpanSegment } from '../types/traces';
 
 interface SegmentScoreBarProps {
@@ -23,8 +24,12 @@ export function SegmentScoreBar({ segments }: SegmentScoreBarProps) {
       <div className="grid grid-cols-[24px_1fr_100px_100px] gap-2 items-center pb-2 border-b border-border">
         <span className="text-text-muted text-xs text-center">#</span>
         <span className="text-text-muted text-xs">Segment</span>
-        <span className="text-text-muted text-xs text-right">Influence</span>
-        <span className="text-text-muted text-xs text-right">Utilization</span>
+        <span className="text-text-muted text-xs text-right">
+          <Tooltip text="How much this chunk affected uncertain tokens">Influence</Tooltip>
+        </span>
+        <span className="text-text-muted text-xs text-right">
+          <Tooltip text="How much of this chunk's content appeared in output">Utilization</Tooltip>
+        </span>
       </div>
 
       {ranked.map(({ seg, originalIndex }, rank) => {

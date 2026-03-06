@@ -1,9 +1,32 @@
 import { useState, useEffect, useRef } from 'react';
 import { useInView } from '../hooks/useInView';
+import { useTheme } from '../hooks/useTheme';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '/api';
 
 // ─── Shared ───────────────────────────────────────────────────────
+
+function ThemeToggle() {
+  const { theme, toggle } = useTheme();
+
+  return (
+    <button
+      onClick={toggle}
+      aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+      className="flex items-center justify-center w-9 h-9 rounded-lg bg-surface-secondary/60 backdrop-blur-sm border border-border text-text-secondary hover:text-text-primary hover:bg-surface-tertiary transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"
+    >
+      {theme === 'light' ? (
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>
+      ) : (
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+        </svg>
+      )}
+    </button>
+  );
+}
 
 function GoogleButton() {
   function handleGoogleLogin() {
@@ -112,13 +135,13 @@ function AnimatedBackground() {
 function EditorWindow({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="bg-surface-secondary/80 backdrop-blur-md border border-border rounded-lg overflow-hidden shadow-lg">
-      <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border">
-        <span className="w-3 h-3 rounded-full bg-red-500/70" />
-        <span className="w-3 h-3 rounded-full bg-yellow-500/70" />
-        <span className="w-3 h-3 rounded-full bg-green-500/70" />
-        <span className="text-text-muted text-xs ml-2 font-mono">{title}</span>
+      <div className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 border-b border-border">
+        <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-red-500/70" />
+        <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-yellow-500/70" />
+        <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-green-500/70" />
+        <span className="text-text-muted text-[10px] sm:text-xs ml-1.5 sm:ml-2 font-mono">{title}</span>
       </div>
-      <div className="p-4">{children}</div>
+      <div className="p-3 sm:p-4 overflow-x-auto">{children}</div>
     </div>
   );
 }
@@ -208,7 +231,7 @@ function HeroCode() {
 
   return (
     <EditorWindow title="answer.py">
-      <pre className="font-mono text-xs leading-6 min-h-[200px]">
+      <pre className="font-mono text-[10px] sm:text-xs leading-5 sm:leading-6 min-h-[160px] sm:min-h-[200px]">
         {visibleLines.map((line, i) => (
           <div
             key={i}
@@ -254,7 +277,7 @@ const SPAN_COLORS: Record<string, string> = {
 function HeroTrace() {
   return (
     <EditorWindow title="trace">
-      <div className="min-h-[200px] space-y-1">
+      <div className="min-h-[160px] sm:min-h-[200px] space-y-1">
         {TRACE_SPANS.map((span) => (
           <div
             key={span.name}
@@ -322,12 +345,13 @@ function HeroTrace() {
 
 function HeroSection() {
   return (
-    <section className="relative min-h-screen flex flex-col items-center justify-center px-6 overflow-hidden">
-      {/* Logo — layered diamond with radiating rings and glow */}
-      <div
-        className="absolute top-8 left-1/2 -translate-x-1/2 z-10 flex items-center gap-4"
-        style={{ animation: 'landing-logo-entrance 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards' }}
-      >
+    <section className="relative min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 pt-20 pb-12 overflow-hidden">
+      {/* Top nav — logo left, theme toggle right */}
+      <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-4 sm:px-8 py-4">
+        <div
+          className="flex items-center gap-3"
+          style={{ animation: 'landing-logo-entrance 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards' }}
+        >
         <div className="relative flex items-center justify-center w-14 h-14">
           {/* Outer glow ring */}
           <div
@@ -398,18 +422,20 @@ function HeroSection() {
         >
           Trace
         </span>
+        </div>
+        <ThemeToggle />
       </div>
 
       <div
-        className="relative z-10 w-full max-w-5xl grid md:grid-cols-2 gap-8 mb-16"
+        className="relative z-10 w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 mb-10 sm:mb-16"
         style={{ animation: 'landing-float 8s ease-in-out infinite' }}
       >
         <HeroCode />
         <HeroTrace />
       </div>
 
-      <div className="relative z-10 flex flex-col items-center text-center max-w-2xl">
-        <h1 className="text-4xl md:text-5xl font-bold mb-4">
+      <div className="relative z-10 flex flex-col items-center text-center max-w-2xl px-2">
+        <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4">
           <span
             style={{
               backgroundImage: 'linear-gradient(135deg, var(--raw-text-primary), var(--raw-accent))',
@@ -420,7 +446,7 @@ function HeroSection() {
             Debug and track your LLM application
           </span>
         </h1>
-        <p className="text-text-secondary text-lg mb-8">
+        <p className="text-text-secondary text-base sm:text-lg mb-8">
           One decorator gives you full visibility — traces, costs, attribution, and reliability.
         </p>
         <GoogleButton />
@@ -429,7 +455,7 @@ function HeroSection() {
   );
 }
 
-// ─── Section 2: Black Box ─────────────────────────────────────────
+// ─── Section 2: The Problem ───────────────────────────────────────
 
 function TextReveal({ text, delayOffset = 0 }: { text: string; delayOffset?: number }) {
   const { ref, inView } = useInView({ threshold: 0.3 });
@@ -453,44 +479,96 @@ function TextReveal({ text, delayOffset = 0 }: { text: string; delayOffset?: num
   );
 }
 
+const PAIN_POINTS = [
+  {
+    question: 'Why did the model hallucinate?',
+    detail: 'You shipped a RAG pipeline. A user reports a wrong answer. You check logs — all you see is the final string. Which document caused it? Was the retriever even relevant? You have no idea.',
+  },
+  {
+    question: 'Which call is burning money?',
+    detail: 'Your monthly bill doubled. Is it the summarizer? The classifier? The embedding calls? Without per-function cost tracking, you\'re guessing.',
+  },
+  {
+    question: 'What broke after the last deploy?',
+    detail: 'Latency spiked 3x. Success rate dropped. But your LLM code looks the same. Was it a prompt change? A model update? A retriever regression? Logs won\'t tell you.',
+  },
+];
+
 const REVEAL_SPANS = [
   { name: 'my_pipeline', type: 'generic', width: 85 },
   { name: 'embed_query', type: 'retrieval', width: 25 },
   { name: 'chat_completion', type: 'llm', width: 55 },
 ];
 
-function BlackBoxSection() {
-  const { ref, inView } = useInView({ threshold: 0.3 });
-  const charCount = 'Your LLM is a black box.'.length;
+function ProblemSection() {
+  const { ref: revealRef, inView: revealInView } = useInView({ threshold: 0.3 });
 
   return (
-    <section className="relative min-h-screen flex flex-col items-center justify-center px-6">
-      <div className="max-w-3xl text-center">
-        <h2 className="text-3xl md:text-4xl font-bold mb-4">
-          <TextReveal text="Your LLM is a black box." />
-        </h2>
-        <p className="text-accent text-2xl md:text-3xl font-semibold">
-          <TextReveal text="Until now." delayOffset={charCount * 15 + 800} />
-        </p>
+    <section className="relative py-24 sm:py-32 px-4 sm:px-6">
+      <div className="max-w-4xl mx-auto">
+        {/* Headline */}
+        <div className="text-center mb-16 sm:mb-20">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3">
+            <TextReveal text="Your LLM is a black box." />
+          </h2>
+          <p className="text-text-secondary text-base sm:text-lg max-w-2xl mx-auto mt-4">
+            You shipped the pipeline. It works... mostly. Then things go wrong, and you realize you can&apos;t see inside any of it.
+          </p>
+        </div>
 
+        {/* Pain point cards */}
+        <div className="space-y-6 sm:space-y-8 mb-16 sm:mb-20">
+          {PAIN_POINTS.map((point, i) => {
+            const { ref, inView } = useInView({ threshold: 0.2 });
+            return (
+              <div
+                key={i}
+                ref={ref}
+                className="bg-surface-secondary/60 backdrop-blur-sm border border-border rounded-xl p-5 sm:p-8 transition-all duration-700 ease-out"
+                style={{
+                  opacity: inView ? 1 : 0,
+                  transform: inView ? 'translateY(0)' : 'translateY(20px)',
+                  transitionDelay: `${i * 100}ms`,
+                }}
+              >
+                <h3 className="text-text-primary text-base sm:text-lg font-semibold mb-2 flex items-start gap-2">
+                  <span className="text-error shrink-0 mt-0.5">?</span>
+                  <span>&ldquo;{point.question}&rdquo;</span>
+                </h3>
+                <p className="text-text-secondary text-sm sm:text-[15px] leading-relaxed ml-5">
+                  {point.detail}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* The reveal */}
+        <div className="text-center mb-10">
+          <p className="text-accent text-xl sm:text-2xl md:text-3xl font-semibold">
+            <TextReveal text="Until now." delayOffset={200} />
+          </p>
+        </div>
+
+        {/* Trace visualization — blur to clear */}
         <div
-          ref={ref}
-          className="mt-12 transition-all ease-out"
+          ref={revealRef}
+          className="max-w-lg mx-auto transition-all ease-out"
           style={{
-            filter: inView ? 'blur(0px)' : 'blur(8px)',
-            opacity: inView ? 1 : 0.3,
+            filter: revealInView ? 'blur(0px)' : 'blur(8px)',
+            opacity: revealInView ? 1 : 0.3,
             transitionDuration: '1200ms',
           }}
         >
-          <div className="bg-surface-secondary/80 backdrop-blur-md border border-border rounded-lg p-6 text-left space-y-2 shadow-lg">
+          <div className="bg-surface-secondary/80 backdrop-blur-md border border-border rounded-lg p-4 sm:p-6 text-left space-y-2 shadow-lg">
             {REVEAL_SPANS.map((span) => (
-              <div key={span.name} className="flex items-center gap-3">
+              <div key={span.name} className="flex items-center gap-2 sm:gap-3">
                 <div
                   className="w-1 h-5 rounded-full shrink-0"
                   style={{ backgroundColor: SPAN_COLORS[span.type] }}
                 />
-                <span className="font-mono text-xs text-text-primary w-32">{span.name}</span>
-                <div className="flex-1 h-2.5 bg-surface-tertiary rounded-full overflow-hidden">
+                <span className="font-mono text-[11px] sm:text-xs text-text-primary w-24 sm:w-32 truncate">{span.name}</span>
+                <div className="flex-1 h-2 sm:h-2.5 bg-surface-tertiary rounded-full overflow-hidden">
                   <div
                     className="h-full rounded-full"
                     style={{
@@ -817,17 +895,17 @@ function FeaturesSection() {
   const { ref: perfRef, inView: perfInView } = useInView({ threshold: 0.15 });
 
   return (
-    <section className="relative py-32 px-6">
+    <section className="relative py-24 sm:py-32 px-4 sm:px-6">
       <div className="max-w-6xl mx-auto">
-        <h2 className="text-3xl md:text-4xl font-bold text-text-primary text-center mb-3">
+        <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-text-primary text-center mb-3">
           Everything you need to ship with confidence
         </h2>
-        <p className="text-text-secondary text-center mb-16 max-w-xl mx-auto">
+        <p className="text-text-secondary text-center mb-12 sm:mb-16 max-w-xl mx-auto text-sm sm:text-base">
           Every function call, every token, every dollar — traced and visible.
         </p>
 
         {/* Row 1: 2 wider cards */}
-        <div className="grid md:grid-cols-2 gap-6 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6">
           <div ref={infRef}>
             <FeatureCard
               title="What influenced the output"
@@ -848,7 +926,7 @@ function FeaturesSection() {
         </div>
 
         {/* Row 2: 3 metric cards */}
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
           <div ref={costRef}>
             <FeatureCard
               title="Cost per function"
@@ -869,7 +947,7 @@ function FeaturesSection() {
             </FeatureCard>
           </div>
 
-          <div ref={perfRef}>
+          <div ref={perfRef} className="sm:col-span-2 md:col-span-1">
             <FeatureCard
               title="Latency per function"
               subtitle="Track p50, p95, p99 across every call"
@@ -950,12 +1028,12 @@ function StepBlock({ step, index }: { step: (typeof STEPS)[number]; index: numbe
 
 function CodeStepsSection() {
   return (
-    <section className="relative py-32 px-6">
+    <section className="relative py-24 sm:py-32 px-4 sm:px-6">
       <div className="max-w-2xl mx-auto">
-        <h2 className="text-3xl md:text-4xl font-bold text-text-primary text-center mb-4">
+        <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-text-primary text-center mb-4">
           30 seconds to first trace
         </h2>
-        <p className="text-text-secondary text-center mb-16">
+        <p className="text-text-secondary text-center mb-12 sm:mb-16 text-sm sm:text-base">
           Three steps. No config files. No infrastructure.
         </p>
         <div className="space-y-10">
@@ -972,14 +1050,14 @@ function CodeStepsSection() {
 
 function CTASection() {
   return (
-    <section className="relative py-32 px-6">
+    <section className="relative py-24 sm:py-32 px-4 sm:px-6">
       <div className="max-w-md mx-auto flex flex-col items-center text-center">
         <div
-          className="inline-flex items-center justify-center w-20 h-20 rounded-2xl mb-8"
+          className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-2xl mb-6 sm:mb-8"
           style={{ animation: 'landing-diamond-glow 3s ease-in-out infinite' }}
         >
           <span
-            className="text-6xl text-accent"
+            className="text-5xl sm:text-6xl text-accent"
             style={{
               textShadow: '0 0 20px rgba(var(--raw-accent-rgb), 0.4), 0 0 40px rgba(var(--raw-accent-rgb), 0.2)',
             }}
@@ -987,10 +1065,10 @@ function CTASection() {
             &#9671;
           </span>
         </div>
-        <h2 className="text-3xl md:text-4xl font-bold text-text-primary mb-4">
+        <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-text-primary mb-4">
           Start tracing
         </h2>
-        <p className="text-text-secondary mb-8">
+        <p className="text-text-secondary mb-8 text-sm sm:text-base">
           Add one decorator. See everything.
         </p>
         <GoogleButton />
@@ -1022,7 +1100,7 @@ export function LandingPage() {
       <AnimatedBackground />
       <div className="relative" style={{ zIndex: 1 }}>
         <HeroSection />
-        <BlackBoxSection />
+        <ProblemSection />
         <FeaturesSection />
         <CodeStepsSection />
         <CTASection />

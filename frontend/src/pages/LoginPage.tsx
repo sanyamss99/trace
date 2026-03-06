@@ -1,26 +1,8 @@
-import { useState } from 'react';
-import { useApiKey } from '../hooks/useApiKey';
-
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '/api';
 
 export function LoginPage() {
-  const { setApiKey } = useApiKey();
-  const [showApiKey, setShowApiKey] = useState(false);
-  const [value, setValue] = useState('');
-  const [error, setError] = useState('');
-
   function handleGoogleLogin() {
     window.location.href = `${API_BASE}/auth/google`;
-  }
-
-  function handleApiKeySubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const trimmed = value.trim();
-    if (!trimmed) {
-      setError('API key is required');
-      return;
-    }
-    setApiKey(trimmed);
   }
 
   return (
@@ -62,46 +44,6 @@ export function LoginPage() {
             </svg>
             Sign in with Google
           </button>
-
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-border" />
-            </div>
-            <div className="relative flex justify-center text-xs">
-              <button
-                type="button"
-                onClick={() => setShowApiKey(!showApiKey)}
-                className="bg-surface-secondary px-2 text-text-muted hover:text-text-secondary transition-colors"
-              >
-                {showApiKey ? 'Hide' : 'Use API key instead'}
-              </button>
-            </div>
-          </div>
-
-          {showApiKey && (
-            <form onSubmit={handleApiKeySubmit}>
-              <input
-                type="password"
-                value={value}
-                onChange={(e) => {
-                  setValue(e.target.value);
-                  setError('');
-                }}
-                placeholder="tr-xxxxxxxxxxxxxxxxxxxx"
-                className="w-full bg-surface-tertiary border border-border rounded-md px-4 py-2.5 text-text-primary font-mono text-sm placeholder:text-text-muted focus:outline-none focus:border-accent transition-colors"
-                autoFocus
-              />
-              {error && (
-                <p className="text-error text-sm mt-2">{error}</p>
-              )}
-              <button
-                type="submit"
-                className="w-full mt-4 bg-accent hover:bg-accent/90 text-white rounded-md px-4 py-2.5 text-sm font-medium transition-colors"
-              >
-                Connect
-              </button>
-            </form>
-          )}
         </div>
       </div>
     </div>

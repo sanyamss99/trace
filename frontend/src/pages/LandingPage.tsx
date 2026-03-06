@@ -479,6 +479,29 @@ function TextReveal({ text, delayOffset = 0 }: { text: string; delayOffset?: num
   );
 }
 
+function PainPointCard({ point, index }: { point: { question: string; detail: string }; index: number }) {
+  const { ref, inView } = useInView({ threshold: 0.2 });
+  return (
+    <div
+      ref={ref}
+      className="bg-surface-secondary/60 backdrop-blur-sm border border-border rounded-xl p-5 sm:p-8 transition-all duration-700 ease-out"
+      style={{
+        opacity: inView ? 1 : 0,
+        transform: inView ? 'translateY(0)' : 'translateY(20px)',
+        transitionDelay: `${index * 100}ms`,
+      }}
+    >
+      <h3 className="text-text-primary text-base sm:text-lg font-semibold mb-2 flex items-start gap-2">
+        <span className="text-error shrink-0 mt-0.5">?</span>
+        <span>&ldquo;{point.question}&rdquo;</span>
+      </h3>
+      <p className="text-text-secondary text-sm sm:text-[15px] leading-relaxed ml-5">
+        {point.detail}
+      </p>
+    </div>
+  );
+}
+
 const PAIN_POINTS = [
   {
     question: 'Why did the model hallucinate?',
@@ -518,29 +541,9 @@ function ProblemSection() {
 
         {/* Pain point cards */}
         <div className="space-y-6 sm:space-y-8 mb-16 sm:mb-20">
-          {PAIN_POINTS.map((point, i) => {
-            const { ref, inView } = useInView({ threshold: 0.2 });
-            return (
-              <div
-                key={i}
-                ref={ref}
-                className="bg-surface-secondary/60 backdrop-blur-sm border border-border rounded-xl p-5 sm:p-8 transition-all duration-700 ease-out"
-                style={{
-                  opacity: inView ? 1 : 0,
-                  transform: inView ? 'translateY(0)' : 'translateY(20px)',
-                  transitionDelay: `${i * 100}ms`,
-                }}
-              >
-                <h3 className="text-text-primary text-base sm:text-lg font-semibold mb-2 flex items-start gap-2">
-                  <span className="text-error shrink-0 mt-0.5">?</span>
-                  <span>&ldquo;{point.question}&rdquo;</span>
-                </h3>
-                <p className="text-text-secondary text-sm sm:text-[15px] leading-relaxed ml-5">
-                  {point.detail}
-                </p>
-              </div>
-            );
-          })}
+          {PAIN_POINTS.map((point, i) => (
+            <PainPointCard key={i} point={point} index={i} />
+          ))}
         </div>
 
         {/* The reveal */}

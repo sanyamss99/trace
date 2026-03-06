@@ -111,27 +111,19 @@ async def google_callback(
     if not email:
         raise AuthenticationError("No email in Google profile")
 
-    google_name = userinfo.get("name", email.split("@")[0])
-
     # Find or create user
     user = await auth_dal.get_user_by_email(db, email)
     if not user:
         user = await auth_dal.create_user(db, email)
         logger.info("Created new user email=%s", email)
 
-    # Find or create org + membership
-    org = await auth_dal.get_single_org(db)
-    if not org:
-        org = await auth_dal.create_org(db, f"{google_name}'s Team")
-        await auth_dal.create_membership(db, org.id, user.id, role="owner")
-        logger.info("Created new org org_id=%s for email=%s", org.id, email)
-    else:
-        membership = await auth_dal.get_membership(db, org.id, user.id)
-        if not membership:
-            await auth_dal.create_membership(db, org.id, user.id, role="member")
-            logger.info("Added user email=%s to org org_id=%s", email, org.id)
+    # Look up existing membership — user must create or join an org via the UI
+    from api.dal import orgs as orgs_dal
 
-    jwt_token = create_access_token(user.id, org.id, email)
+    membership = await orgs_dal.get_user_membership(db, user.id)
+    org_id = membership.org_id if membership else ""
+
+    jwt_token = create_access_token(user.id, org_id, email)
 
     response = RedirectResponse(
         url=f"{settings.frontend_url}/#token={jwt_token}",

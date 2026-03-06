@@ -14,6 +14,7 @@ export interface AnalyticsFilters {
 
 function buildQuery(filters: AnalyticsFilters): string {
   const params = new URLSearchParams();
+  
   if (filters.started_after) params.set('started_after', filters.started_after);
   if (filters.started_before) params.set('started_before', filters.started_before);
   if (filters.environment) params.set('environment', filters.environment);

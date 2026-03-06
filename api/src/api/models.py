@@ -53,6 +53,7 @@ class Organization(Base):
     api_keys: Mapped[list["ApiKey"]] = relationship(back_populates="organization")
     traces: Mapped[list["Trace"]] = relationship(back_populates="organization")
     usage_events: Mapped[list["UsageEvent"]] = relationship(back_populates="organization")
+    join_requests: Mapped[list["JoinRequest"]] = relationship(back_populates="organization")
 
 
 # ---------------------------------------------------------------------------
@@ -96,6 +97,35 @@ class OrgMember(Base):
     user: Mapped["User"] = relationship(back_populates="memberships")
 
     __table_args__ = (Index("idx_org_members_user", "user_id"),)
+
+
+# ---------------------------------------------------------------------------
+# Join Requests
+# ---------------------------------------------------------------------------
+
+
+class JoinRequest(Base):
+    """Tracks requests from users to join an organization."""
+
+    __tablename__ = "join_requests"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    org_id: Mapped[str] = mapped_column(String(36), ForeignKey("organizations.id"), nullable=False)
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False)
+    status: Mapped[str] = mapped_column(Text, nullable=False, default="pending")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_naive_utcnow)
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime)
+    resolved_by: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id"))
+
+    # Relationships
+    organization: Mapped["Organization"] = relationship(back_populates="join_requests")
+    user: Mapped["User"] = relationship(foreign_keys=[user_id])
+    resolver: Mapped["User | None"] = relationship(foreign_keys=[resolved_by])
+
+    __table_args__ = (
+        Index("idx_join_requests_org_status", "org_id", "status"),
+        UniqueConstraint("org_id", "user_id", name="uq_join_request_org_user"),
+    )
 
 
 # ---------------------------------------------------------------------------

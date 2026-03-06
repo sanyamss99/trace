@@ -6,6 +6,7 @@ import { useApiKey } from './hooks/useApiKey';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Layout } from './components/Layout';
 import { LoginPage } from './pages/LoginPage';
+import { OrgSelectionPage } from './pages/OrgSelectionPage';
 import { LoadingSpinner } from './components/LoadingSpinner';
 
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
@@ -33,10 +34,15 @@ function OAuthCallbackHandler() {
 }
 
 function AuthGate() {
-  const { apiKey } = useApiKey();
+  const { apiKey, orgId } = useApiKey();
 
   if (!apiKey) {
     return <LoginPage />;
+  }
+
+  // JWT user with no org — show org selection
+  if (!orgId) {
+    return <OrgSelectionPage />;
   }
 
   return (

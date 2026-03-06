@@ -1,12 +1,21 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useApiKey } from '../hooks/useApiKey';
 import { useApiKeys } from '../hooks/useApiKeys';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { formatRelativeDate } from '../utils/formatters';
+import {
+  getMembers,
+  updateMemberRole,
+  removeMember,
+  getJoinRequests,
+  resolveJoinRequest,
+  type MemberResponse,
+  type JoinRequestResponse,
+} from '../api/orgs';
 
 export function SettingsPage() {
-  const { apiKey, clearApiKey } = useApiKey();
+  const { apiKey, clearApiKey, userId } = useApiKey();
   const { keys, loading, error, create, revoke, refetch } = useApiKeys();
   const [newKeyName, setNewKeyName] = useState('');
   const [createdKey, setCreatedKey] = useState<string | null>(null);
@@ -14,6 +23,53 @@ export function SettingsPage() {
   const [copied, setCopied] = useState(false);
   const [confirmingDisconnect, setConfirmingDisconnect] = useState(false);
   const [confirmingRevokeId, setConfirmingRevokeId] = useState<string | null>(null);
+
+  // Members + join requests state
+  const [members, setMembers] = useState<MemberResponse[]>([]);
+  const [joinRequests, setJoinRequests] = useState<JoinRequestResponse[]>([]);
+  const [isOwner, setIsOwner] = useState(false);
+  const [membersLoading, setMembersLoading] = useState(true);
+  const [confirmingRemoveId, setConfirmingRemoveId] = useState<string | null>(null);
+
+  const loadOrgData = useCallback(async () => {
+    setMembersLoading(true);
+    try {
+      const { members: m } = await getMembers();
+      setMembers(m);
+      const currentUser = m.find((member) => member.user_id === userId);
+      const ownerStatus = currentUser?.role === 'owner';
+      setIsOwner(ownerStatus);
+      if (ownerStatus) {
+        const { requests } = await getJoinRequests();
+        setJoinRequests(requests);
+      }
+    } catch {
+      // Not an owner or no org — silently ignore
+      setIsOwner(false);
+    } finally {
+      setMembersLoading(false);
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    loadOrgData();
+  }, [loadOrgData]);
+
+  async function handleRoleChange(memberId: string, newRole: 'owner' | 'member') {
+    await updateMemberRole(memberId, newRole);
+    await loadOrgData();
+  }
+
+  async function handleRemoveMember(memberId: string) {
+    await removeMember(memberId);
+    setConfirmingRemoveId(null);
+    await loadOrgData();
+  }
+
+  async function handleResolveRequest(requestId: string, action: 'accept' | 'decline') {
+    await resolveJoinRequest(requestId, action);
+    await loadOrgData();
+  }
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -118,7 +174,7 @@ export function SettingsPage() {
       </div>
 
       {/* Key list */}
-      <div className="bg-surface-secondary border border-border rounded-lg p-5">
+      <div className="bg-surface-secondary border border-border rounded-lg p-5 mb-6">
         <h2 className="text-text-primary text-sm font-medium mb-3">API Keys</h2>
         {error ? (
           <ErrorMessage error={error} onRetry={refetch} />
@@ -180,6 +236,105 @@ export function SettingsPage() {
           </div>
         )}
       </div>
+
+      {/* Members — owner only */}
+      {isOwner && (
+        <div className="bg-surface-secondary border border-border rounded-lg p-5 mb-6">
+          <h2 className="text-text-primary text-sm font-medium mb-3">Members</h2>
+          {membersLoading ? (
+            <LoadingSpinner />
+          ) : members.length === 0 ? (
+            <p className="text-text-muted text-sm">No members.</p>
+          ) : (
+            <div className="space-y-2">
+              {members.map((member) => (
+                <div
+                  key={member.user_id}
+                  className="flex items-center justify-between py-2 border-b border-border last:border-0"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-text-primary text-sm">{member.email}</span>
+                    <span className={`text-xs px-1.5 py-0.5 rounded ${
+                      member.role === 'owner'
+                        ? 'bg-accent/10 text-accent'
+                        : 'bg-surface-tertiary text-text-muted'
+                    }`}>
+                      {member.role}
+                    </span>
+                  </div>
+                  {member.user_id !== userId && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleRoleChange(
+                          member.user_id,
+                          member.role === 'owner' ? 'member' : 'owner'
+                        )}
+                        className="text-xs text-accent hover:text-accent/80 transition-colors"
+                      >
+                        {member.role === 'owner' ? 'Demote' : 'Promote'}
+                      </button>
+                      {confirmingRemoveId === member.user_id ? (
+                        <span className="flex items-center gap-1 text-xs">
+                          <button
+                            onClick={() => handleRemoveMember(member.user_id)}
+                            className="text-error hover:text-error/80 font-medium"
+                          >
+                            Confirm
+                          </button>
+                          <button
+                            onClick={() => setConfirmingRemoveId(null)}
+                            className="text-text-muted hover:text-text-secondary"
+                          >
+                            Cancel
+                          </button>
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => setConfirmingRemoveId(member.user_id)}
+                          className="text-xs text-text-muted hover:text-error transition-colors"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Join Requests — owner only */}
+      {isOwner && joinRequests.length > 0 && (
+        <div className="bg-surface-secondary border border-border rounded-lg p-5">
+          <h2 className="text-text-primary text-sm font-medium mb-3">Join Requests</h2>
+          <div className="space-y-2">
+            {joinRequests.map((req) => (
+              <div
+                key={req.id}
+                className="flex items-center justify-between py-2 border-b border-border last:border-0"
+              >
+                <span className="text-text-primary text-sm">{req.user_email}</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleResolveRequest(req.id, 'accept')}
+                    className="text-xs bg-accent hover:bg-accent/90 text-white rounded px-2 py-1 font-medium transition-colors"
+                  >
+                    Accept
+                  </button>
+                  <button
+                    onClick={() => handleResolveRequest(req.id, 'decline')}
+                    className="text-xs text-text-muted hover:text-error transition-colors"
+                  >
+                    Decline
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

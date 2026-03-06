@@ -5,7 +5,7 @@ import { AuthProvider } from './context/AuthContext';
 import { useApiKey } from './hooks/useApiKey';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Layout } from './components/Layout';
-import { LoginPage } from './pages/LoginPage';
+import { LandingPage } from './pages/LandingPage';
 import { OrgSelectionPage } from './pages/OrgSelectionPage';
 import { LoadingSpinner } from './components/LoadingSpinner';
 
@@ -37,7 +37,7 @@ function AuthGate() {
   const { apiKey, orgId } = useApiKey();
 
   if (!apiKey) {
-    return <LoginPage />;
+    return <LandingPage />;
   }
 
   // JWT user with no org — show org selection

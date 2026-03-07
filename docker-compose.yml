@@ -22,7 +22,7 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://trace:trace@postgres:5432/trace
       LOG_LEVEL: INFO
-      CORS_ORIGINS: '["http://localhost"]'
+      CORS_ORIGINS: "http://localhost,http://localhost:5173"
     ports:
       - "8000:8000"
 

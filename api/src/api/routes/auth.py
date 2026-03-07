@@ -50,6 +50,7 @@ async def google_login(request: Request) -> RedirectResponse:
         value=state,
         httponly=True,
         samesite="lax",
+        secure=not settings.is_debug,
         max_age=600,
     )
     return response

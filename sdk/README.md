@@ -1,61 +1,31 @@
 # usetrace
 
-Lightweight tracing SDK for LLM applications. Add `@tracer.observe()` to your functions and get full visibility into execution traces, token usage, and latency — with zero impact on your application.
+Lightweight tracing SDK for LLM applications. Add `@tracer.observe()` to your functions and get visual attribution maps that answer **"Why did the LLM say that?"**
 
 ## Install
 
 ```bash
 pip install usetrace
-# or
-uv add usetrace
 ```
 
-## Quick start
+## Quick Start
 
 ```python
 from usetrace import Trace
 
-tracer = Trace(api_key="your-key", base_url="https://your-trace-server.com")
+tracer = Trace(api_key="your-key", base_url="https://api.use-trace.com")
 
 @tracer.observe(span_type="llm", model="gpt-4o")
-def ask(prompt: str) -> str:
-    response = openai.chat.completions.create(
-        model="gpt-4o",
-        messages=[{"role": "user", "content": prompt}],
-    )
-    return response
-
-@tracer.observe(span_type="chain")
-def pipeline(question: str) -> dict:
-    answer = ask(question)          # captured as child span
-    summary = ask(f"Summarize: {answer}")  # captured as child span
-    return {"answer": answer, "summary": summary}
+def my_llm_function(prompt: str) -> str:
+    return openai.chat.completions.create(...)
 ```
 
-Nested `@observe()` calls automatically build parent-child span trees. LLM responses are parsed to extract token counts, completion text, and logprobs across OpenAI, Anthropic, Gemini, and other providers.
+Every traced call is captured — inputs, outputs, latency, token usage — and sent to the Trace dashboard where you can inspect full execution trees and per-token attribution maps.
 
-## Features
+## Dashboard
 
-- Sync and async function support (auto-detected)
-- Parent-child span linking via `contextvars` (async-safe)
-- Multi-vendor LLM response extraction (OpenAI, Anthropic, Gemini, Ollama, Together, xAI)
-- Memory-bounded buffer with configurable ceiling
-- Background flush with hybrid strategy (span count OR timer)
-- Fire-and-forget delivery — never blocks your application
-
-## Configuration
-
-```python
-tracer = Trace(
-    api_key="your-key",
-    base_url="https://your-trace-server.com",
-    environment="production",
-    flush_interval=5.0,         # seconds between flushes
-    batch_size=50,              # max spans per batch
-    max_buffer_bytes=10*1024*1024,  # 10 MB buffer ceiling
-)
-```
+Sign up and explore your traces at [use-trace.com](https://use-trace.com).
 
 ## License
 
-Apache 2.0
+Apache-2.0

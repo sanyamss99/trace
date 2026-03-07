@@ -1,4 +1,4 @@
-.PHONY: install dev test lint format check
+.PHONY: install dev test lint format check publish-sdk
 
 install:
 	uv sync --all-packages
@@ -19,3 +19,6 @@ format:
 	uv run ruff format sdk/ api/
 
 check: lint test
+
+publish-sdk:
+	uv build --package usetrace && uv publish dist/usetrace-*

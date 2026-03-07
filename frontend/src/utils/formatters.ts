@@ -24,6 +24,13 @@ export function formatDate(iso: string): string {
   return format(new Date(iso), 'MMM d, yyyy HH:mm');
 }
 
+export function formatDatePrecise(iso: string): string {
+  const d = new Date(iso);
+  const base = format(d, 'MMM d, yyyy HH:mm:ss');
+  const ms = String(d.getMilliseconds()).padStart(3, '0');
+  return `${base}.${ms}`;
+}
+
 export function formatRelativeDate(iso: string): string {
   return formatDistanceToNow(new Date(iso), { addSuffix: true });
 }

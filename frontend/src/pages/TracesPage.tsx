@@ -11,7 +11,7 @@ import { DateRangeFilter, type DateRange } from '../components/DateRangeFilter';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { EmptyState } from '../components/EmptyState';
-import { formatCost, formatDuration, formatTokens, formatRelativeDate, formatDate } from '../utils/formatters';
+import { formatCost, formatDuration, formatTokens, formatDatePrecise } from '../utils/formatters';
 import type { FunctionCostItem, FunctionDetail, ModelCostItem } from '../types/analytics';
 
 const MODEL_COLORS = ['var(--raw-accent)', '#0ea5e9', '#a855f7', '#f59e0b'];
@@ -349,11 +349,8 @@ export function TracesPage() {
                   {formatTokens(trace.total_tokens)}
                 </span>
 
-                <span
-                  className="text-text-muted text-xs w-20 text-right"
-                  title={formatDate(trace.started_at)}
-                >
-                  {formatRelativeDate(trace.started_at)}
+                <span className="text-text-muted text-xs text-right whitespace-nowrap">
+                  {formatDatePrecise(trace.started_at)}
                 </span>
               </div>
             ))}

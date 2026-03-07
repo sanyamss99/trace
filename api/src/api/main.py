@@ -9,7 +9,7 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 
 from api.config import settings
 from api.database import engine
-from api.exceptions import TraceAppError
+from api.exceptions import RateLimitError, TraceAppError
 from api.logger import logger
 from api.request_id import RequestIdMiddleware
 from api.routes import api_router
@@ -69,11 +69,20 @@ def create_app() -> FastAPI:
         CORSMiddleware,
         allow_origins=[o.strip() for o in settings.cors_origins.split(",")],
         allow_credentials=True,
-        allow_methods=["GET", "POST", "DELETE"],
+        allow_methods=["GET", "POST", "PATCH", "DELETE"],
         allow_headers=["X-Trace-Key", "Content-Type", "Accept", "Authorization"],
     )
 
     application.include_router(api_router)
+
+    @application.exception_handler(RateLimitError)
+    async def rate_limit_handler(_request: Request, exc: RateLimitError) -> JSONResponse:
+        logger.warning("Rate limited: %s", exc.message)
+        return JSONResponse(
+            status_code=429,
+            content={"error": exc.message},
+            headers={"Retry-After": str(exc.retry_after)},
+        )
 
     @application.exception_handler(TraceAppError)
     async def trace_error_handler(_request: Request, exc: TraceAppError) -> JSONResponse:

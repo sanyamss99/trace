@@ -173,6 +173,27 @@ export function SettingsPage() {
         )}
       </div>
 
+      {/* API key usage guide — shown when keys exist */}
+      {keys.length > 0 && (
+        <div className="bg-accent-subtle border border-accent/20 rounded-lg p-5 mb-6">
+          <h2 className="text-text-primary text-sm font-medium mb-3">Using your API key</h2>
+          <div className="space-y-2 font-mono text-xs text-text-secondary">
+            <div>
+              <span className="text-text-muted text-[11px] font-sans uppercase tracking-wide">Python</span>
+              <pre className="bg-surface-primary rounded-md px-3 py-2 mt-1 overflow-x-auto">tracer = Trace(api_key="your-key", base_url="https://api.use-trace.com")</pre>
+            </div>
+            <div>
+              <span className="text-text-muted text-[11px] font-sans uppercase tracking-wide">Environment variable</span>
+              <pre className="bg-surface-primary rounded-md px-3 py-2 mt-1 overflow-x-auto">export TRACE_API_KEY=your-key</pre>
+            </div>
+            <div>
+              <span className="text-text-muted text-[11px] font-sans uppercase tracking-wide">Header</span>
+              <pre className="bg-surface-primary rounded-md px-3 py-2 mt-1 overflow-x-auto">X-Trace-Key: your-key</pre>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Key list */}
       <div className="bg-surface-secondary border border-border rounded-lg p-5 mb-6">
         <h2 className="text-text-primary text-sm font-medium mb-3">API Keys</h2>

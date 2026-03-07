@@ -27,8 +27,10 @@ class RateLimitError(TraceAppError):
     def __init__(
         self,
         message: str = "Too many failed authentication attempts. Try again later.",
+        retry_after: int = 60,
     ) -> None:
         super().__init__(message, status_code=429)
+        self.retry_after = retry_after
 
 
 class InvalidCursorError(TraceAppError):

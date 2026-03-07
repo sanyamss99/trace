@@ -1,13 +1,16 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 
 export function OnboardingBanner() {
   const [copied, setCopied] = useState(false);
 
-  const snippet = `from usetrace import trace
+  const snippet = `from usetrace import Trace
 
-@trace
+tracer = Trace(api_key="your-key", base_url="https://api.use-trace.com")
+
+@tracer.observe(span_type="llm", model="gpt-4o")
 def my_llm_function(prompt: str) -> str:
-    return openai.chat(prompt)`;
+    return openai.chat.completions.create(...)`;
 
   function handleCopy() {
     navigator.clipboard.writeText(snippet).then(() => {
@@ -22,9 +25,34 @@ def my_llm_function(prompt: str) -> str:
         Get started with Trace
       </h2>
       <p className="text-text-secondary text-sm mb-4">
-        Add the <code className="text-accent">@trace</code> decorator to your
-        LLM functions to start capturing traces.
+        Three steps to start capturing traces from your LLM application:
       </p>
+
+      <div className="space-y-3 mb-4">
+        <div className="flex items-start gap-3">
+          <span className="flex-shrink-0 w-5 h-5 rounded-full bg-accent/20 text-accent text-xs font-semibold flex items-center justify-center mt-0.5">1</span>
+          <p className="text-text-secondary text-sm">
+            <Link to="/settings" className="text-accent hover:text-accent/80 font-medium transition-colors">
+              Create an API key
+            </Link>
+            {' '}in Settings
+          </p>
+        </div>
+        <div className="flex items-start gap-3">
+          <span className="flex-shrink-0 w-5 h-5 rounded-full bg-accent/20 text-accent text-xs font-semibold flex items-center justify-center mt-0.5">2</span>
+          <p className="text-text-secondary text-sm">
+            Install the SDK:{' '}
+            <code className="text-accent bg-surface-primary px-1.5 py-0.5 rounded text-xs">pip install usetrace</code>
+          </p>
+        </div>
+        <div className="flex items-start gap-3">
+          <span className="flex-shrink-0 w-5 h-5 rounded-full bg-accent/20 text-accent text-xs font-semibold flex items-center justify-center mt-0.5">3</span>
+          <p className="text-text-secondary text-sm">
+            Add the decorator to your LLM functions:
+          </p>
+        </div>
+      </div>
+
       <div className="relative">
         <pre className="font-mono text-xs text-text-secondary bg-surface-primary rounded-md p-4 overflow-x-auto whitespace-pre">
           {snippet}

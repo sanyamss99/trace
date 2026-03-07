@@ -126,6 +126,22 @@ class ModelCostItem(BaseModel):
     avg_quality_score: float | None = None
 
 
+class LatencyPercentiles(BaseModel):
+    """Latency percentile values in milliseconds."""
+
+    p50: float | None
+    p90: float | None
+    p99: float | None
+
+
+class FunctionDetailResponse(BaseModel):
+    """Latency percentiles and recent call statuses for a single function."""
+
+    function_name: str
+    percentiles: LatencyPercentiles
+    recent_statuses: list[str]
+
+
 class OverviewStatsResponse(BaseModel):
     """Dashboard header summary stats."""
 

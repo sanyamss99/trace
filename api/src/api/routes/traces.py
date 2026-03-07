@@ -1,5 +1,6 @@
 """Read endpoints for traces and spans."""
 
+import statistics
 from datetime import datetime
 
 from fastapi import APIRouter, Query
@@ -13,6 +14,8 @@ from api.models import Span
 from api.schemas.traces import (
     AttributionResponse,
     FunctionCostItem,
+    FunctionDetailResponse,
+    LatencyPercentiles,
     ModelCostItem,
     OverviewStatsResponse,
     PaginatedTraceListResponse,
@@ -198,6 +201,46 @@ async def get_cost_by_function(
     ]
 
 
+@router.get("/analytics/function-detail", response_model=FunctionDetailResponse)
+async def get_function_detail(
+    db: DbSession,
+    org_id: OrgId,
+    function_name: str = Query(..., description="Function name to get details for"),
+    started_after: datetime | None = None,
+    started_before: datetime | None = None,
+    environment: str | None = None,
+) -> FunctionDetailResponse:
+    """Get latency percentiles and recent call statuses for a function."""
+    data = await trace_dal.function_detail(
+        db,
+        org_id,
+        function_name,
+        started_after=started_after,
+        started_before=started_before,
+        environment=environment,
+    )
+    durations: list[float] = data["durations"]
+
+    if len(durations) == 0:
+        percentiles = LatencyPercentiles(p50=None, p90=None, p99=None)
+    elif len(durations) == 1:
+        val = durations[0]
+        percentiles = LatencyPercentiles(p50=val, p90=val, p99=val)
+    else:
+        qs = statistics.quantiles(durations, n=100)
+        percentiles = LatencyPercentiles(
+            p50=round(qs[49], 2),
+            p90=round(qs[89], 2),
+            p99=round(qs[98], 2),
+        )
+
+    return FunctionDetailResponse(
+        function_name=function_name,
+        percentiles=percentiles,
+        recent_statuses=data["recent_statuses"],
+    )
+
+
 @router.get("/analytics/cost-by-model", response_model=list[ModelCostItem])
 async def get_cost_by_model(
     db: DbSession,
@@ -205,6 +248,7 @@ async def get_cost_by_model(
     started_after: datetime | None = None,
     started_before: datetime | None = None,
     environment: str | None = None,
+    function_name: str | None = None,
 ) -> list[ModelCostItem]:
     """Get cost and usage aggregates grouped by model name."""
     rows = await trace_dal.cost_by_model(
@@ -213,6 +257,7 @@ async def get_cost_by_model(
         started_after=started_after,
         started_before=started_before,
         environment=environment,
+        function_name=function_name,
     )
     return [
         ModelCostItem(

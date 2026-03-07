@@ -3,6 +3,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import clsx from 'clsx';
 import { useTraces } from '../hooks/useTraces';
 import { useCostByFunction } from '../hooks/useCostByFunction';
+import { useFunctionDetail } from '../hooks/useFunctionDetail';
+import { useCostByModel } from '../hooks/useCostByModel';
 import { StatusBadge } from '../components/StatusBadge';
 import { Pagination } from '../components/Pagination';
 import { DateRangeFilter, type DateRange } from '../components/DateRangeFilter';
@@ -10,13 +12,39 @@ import { LoadingSpinner } from '../components/LoadingSpinner';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { EmptyState } from '../components/EmptyState';
 import { formatCost, formatDuration, formatTokens, formatRelativeDate, formatDate } from '../utils/formatters';
-import type { FunctionCostItem } from '../types/analytics';
+import type { FunctionCostItem, FunctionDetail, ModelCostItem } from '../types/analytics';
 
-function FunctionSummaryCards({ item }: { item: FunctionCostItem }) {
+const MODEL_COLORS = ['var(--raw-accent)', '#0ea5e9', '#a855f7', '#f59e0b'];
+
+function FunctionSummaryCards({
+  item,
+  detail,
+  modelCosts,
+}: {
+  item: FunctionCostItem;
+  detail: FunctionDetail | null;
+  modelCosts: ModelCostItem[];
+}) {
   const successRate = item.call_count > 0
     ? ((item.call_count - item.error_count) / item.call_count * 100).toFixed(1)
     : '100.0';
-  const successCount = item.call_count - item.error_count;
+
+  const statuses = detail?.recent_statuses ?? [];
+  const failureCount = statuses.filter((s) => s === 'error').length;
+
+  const p = detail?.percentiles ?? null;
+  const hasPercentiles = p !== null && p.p50 !== null;
+  const percentileBars = hasPercentiles
+    ? [
+        { label: 'p50', value: p!.p50!, color: 'var(--raw-success)' },
+        { label: 'p90', value: p!.p90!, color: 'var(--raw-warning)' },
+        { label: 'p99', value: p!.p99!, color: 'var(--raw-error)' },
+      ]
+    : [];
+  const maxLatency = Math.max(...percentileBars.map((b) => b.value), 1);
+
+  const topModels = modelCosts.slice(0, 4);
+  const maxModelCost = Math.max(...topModels.map((m) => m.total_cost_usd ?? 0), 0.0001);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -30,16 +58,39 @@ function FunctionSummaryCards({ item }: { item: FunctionCostItem }) {
           </span>
           <span className="text-xs text-text-muted">/call</span>
         </div>
-        <div className="mt-3 text-xs text-text-secondary space-y-1">
-          <div className="flex justify-between">
-            <span>Total cost</span>
-            <span className="font-mono">{formatCost(item.total_cost_usd)}</span>
+        {topModels.length > 0 ? (
+          <div className="mt-3 space-y-2">
+            {topModels.map((m, i) => (
+              <div key={m.model} className="space-y-0.5">
+                <div className="flex justify-between text-[11px]">
+                  <span className="text-text-secondary truncate">{m.model}</span>
+                  <span className="font-mono text-text-muted">{formatTokens(m.total_tokens)}</span>
+                </div>
+                <div className="h-1.5 bg-surface-tertiary rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${((m.total_cost_usd ?? 0) / maxModelCost) * 100}%`,
+                      backgroundColor: MODEL_COLORS[i % MODEL_COLORS.length],
+                      opacity: 0.6,
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
           </div>
-          <div className="flex justify-between">
-            <span>Total tokens</span>
-            <span className="font-mono">{formatTokens(item.total_tokens)}</span>
+        ) : (
+          <div className="mt-3 text-xs text-text-secondary space-y-1">
+            <div className="flex justify-between">
+              <span>Total cost</span>
+              <span className="font-mono">{formatCost(item.total_cost_usd)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Total tokens</span>
+              <span className="font-mono">{formatTokens(item.total_tokens)}</span>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Reliability */}
@@ -47,43 +98,91 @@ function FunctionSummaryCards({ item }: { item: FunctionCostItem }) {
         <h3 className="text-sm font-medium text-text-primary">Reliability</h3>
         <p className="text-xs text-text-muted mb-3">Success rate</p>
         <div className="flex items-baseline gap-2">
-          <span className="font-mono text-2xl font-semibold text-green-400">
+          <span className="font-mono text-2xl font-semibold text-success">
             {successRate}%
           </span>
           <span className="text-xs text-text-muted">success</span>
         </div>
-        <div className="mt-3 flex gap-0.5 h-2 rounded overflow-hidden">
-          {item.call_count > 0 && successCount > 0 && (
-            <div
-              className="bg-green-500 rounded-l"
-              style={{ width: `${(successCount / item.call_count) * 100}%` }}
-            />
-          )}
-          {item.error_count > 0 && (
-            <div
-              className="bg-error rounded-r"
-              style={{ width: `${(item.error_count / item.call_count) * 100}%` }}
-            />
-          )}
-        </div>
-        <div className="mt-2 text-xs text-text-secondary flex justify-between">
-          <span>{item.call_count} calls</span>
-          {item.error_count > 0 && (
-            <span className="text-error">{item.error_count} failures</span>
-          )}
-        </div>
+        {statuses.length > 0 ? (
+          <>
+            <div className="mt-3 grid grid-cols-10 gap-0.5">
+              {statuses.map((s, i) => (
+                <div
+                  key={i}
+                  className={clsx(
+                    'h-4 rounded-sm',
+                    s === 'error' ? 'bg-error/80' : 'bg-success/50',
+                  )}
+                />
+              ))}
+            </div>
+            <div className="mt-2 text-xs text-text-secondary flex justify-between">
+              <span>last {statuses.length} calls</span>
+              {failureCount > 0 && (
+                <span className="text-error">{failureCount} failures</span>
+              )}
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="mt-3 flex gap-0.5 h-2 rounded overflow-hidden">
+              {item.call_count > 0 && (item.call_count - item.error_count) > 0 && (
+                <div
+                  className="bg-success/50 rounded-l"
+                  style={{ width: `${((item.call_count - item.error_count) / item.call_count) * 100}%` }}
+                />
+              )}
+              {item.error_count > 0 && (
+                <div
+                  className="bg-error rounded-r"
+                  style={{ width: `${(item.error_count / item.call_count) * 100}%` }}
+                />
+              )}
+            </div>
+            <div className="mt-2 text-xs text-text-secondary flex justify-between">
+              <span>{item.call_count} calls</span>
+              {item.error_count > 0 && (
+                <span className="text-error">{item.error_count} failures</span>
+              )}
+            </div>
+          </>
+        )}
       </div>
 
       {/* Latency */}
       <div className="bg-surface-secondary border border-border rounded-lg p-5">
         <h3 className="text-sm font-medium text-text-primary">Latency</h3>
-        <p className="text-xs text-text-muted mb-3">Average response time</p>
+        <p className="text-xs text-text-muted mb-3">
+          {hasPercentiles ? 'Percentile breakdown' : 'Average response time'}
+        </p>
         <div className="flex items-baseline gap-2">
           <span className="font-mono text-2xl font-semibold text-text-primary">
-            {formatDuration(item.avg_duration_ms)}
+            {formatDuration(hasPercentiles ? p!.p50 : item.avg_duration_ms)}
           </span>
-          <span className="text-xs text-text-muted">avg</span>
+          <span className="text-xs text-text-muted">{hasPercentiles ? 'median' : 'avg'}</span>
         </div>
+        {hasPercentiles && (
+          <div className="mt-3 space-y-2">
+            {percentileBars.map((bar) => (
+              <div key={bar.label} className="space-y-0.5">
+                <div className="flex justify-between text-[11px] font-mono text-text-muted">
+                  <span>{bar.label}</span>
+                  <span>{formatDuration(bar.value)}</span>
+                </div>
+                <div className="h-2 bg-surface-tertiary rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${(bar.value / maxLatency) * 100}%`,
+                      backgroundColor: bar.color,
+                      opacity: 0.6,
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -124,6 +223,13 @@ export function TracesPage() {
     return costByFn.data.find((f) => f.function_name === functionNameParam) ?? null;
   }, [functionNameParam, costByFn.data, costByFn.loading]);
 
+  const functionDetail = useFunctionDetail(functionNameParam, analyticsFilters);
+  const modelCostFilters = useMemo(() => ({
+    ...analyticsFilters,
+    function_name: functionNameParam ?? undefined,
+  }), [analyticsFilters, functionNameParam]);
+  const costByModel = useCostByModel(functionNameParam ? modelCostFilters : analyticsFilters);
+
   const filters = useMemo(() => ({
     function_name: search || undefined,
     status: statusFilter,
@@ -152,7 +258,13 @@ export function TracesPage() {
     <div className="max-w-6xl">
       <h1 className="text-text-primary text-lg font-semibold mb-6">Traces</h1>
 
-      {functionItem && <FunctionSummaryCards item={functionItem} />}
+      {functionItem && (
+        <FunctionSummaryCards
+          item={functionItem}
+          detail={functionDetail.data}
+          modelCosts={functionNameParam ? costByModel.data : []}
+        />
+      )}
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">

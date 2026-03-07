@@ -19,7 +19,7 @@ export function useCostByModel(filters: AnalyticsFilters = {}) {
     } finally {
       if (!signal?.aborted) setLoading(false);
     }
-  }, [filters.started_after, filters.started_before, filters.environment]);
+  }, [filters.started_after, filters.started_before, filters.environment, filters.function_name]);
 
   useEffect(() => {
     const controller = new AbortController();

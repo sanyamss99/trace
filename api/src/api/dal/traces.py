@@ -274,6 +274,7 @@ async def cost_by_model(
     started_after: datetime | None = None,
     started_before: datetime | None = None,
     environment: str | None = None,
+    function_name: str | None = None,
 ) -> list[Row]:
     """Aggregate cost and token usage grouped by model name.
 
@@ -315,13 +316,63 @@ async def cost_by_model(
         query = query.where(Span.started_at >= _to_naive_utc(started_after))
     if started_before:
         query = query.where(Span.started_at <= _to_naive_utc(started_before))
-    if environment:
-        query = query.join(Trace, Span.trace_id == Trace.id).where(
-            Trace.environment == environment
-        )
+
+    needs_trace_join = bool(function_name or environment)
+    if needs_trace_join:
+        query = query.join(Trace, Span.trace_id == Trace.id)
+        if function_name:
+            query = query.where(Trace.function_name == function_name)
+        if environment:
+            query = query.where(Trace.environment == environment)
 
     result = await db.execute(query)
     return list(result.all())
+
+
+async def function_detail(
+    db: AsyncSession,
+    org_id: str,
+    function_name: str,
+    *,
+    started_after: datetime | None = None,
+    started_before: datetime | None = None,
+    environment: str | None = None,
+) -> dict[str, list]:
+    """Fetch raw durations and recent call statuses for a single function.
+
+    Returns {"durations": list[float], "recent_statuses": list[str]}.
+    Durations are in milliseconds and respect all filters.
+    Recent statuses are the last 30 calls (no date/status filters).
+    """
+    # Query 1 — durations (with filters)
+    duration_expr = func.extract("epoch", Trace.ended_at - Trace.started_at) * 1000
+    dur_query = select(duration_expr.label("dur_ms")).where(
+        Trace.org_id == org_id,
+        Trace.function_name == function_name,
+        Trace.ended_at.is_not(None),
+        Trace.started_at.is_not(None),
+    )
+    if started_after:
+        dur_query = dur_query.where(Trace.started_at >= _to_naive_utc(started_after))
+    if started_before:
+        dur_query = dur_query.where(Trace.started_at <= _to_naive_utc(started_before))
+    if environment:
+        dur_query = dur_query.where(Trace.environment == environment)
+
+    dur_result = await db.execute(dur_query)
+    durations = [float(row.dur_ms) for row in dur_result.all() if row.dur_ms is not None]
+
+    # Query 2 — recent statuses (no date/status filters, always last 30)
+    status_query = (
+        select(Trace.status)
+        .where(Trace.org_id == org_id, Trace.function_name == function_name)
+        .order_by(Trace.started_at.desc())
+        .limit(30)
+    )
+    status_result = await db.execute(status_query)
+    recent_statuses = [row.status for row in status_result.all()]
+
+    return {"durations": durations, "recent_statuses": recent_statuses}
 
 
 async def overview_stats(

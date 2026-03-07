@@ -259,7 +259,8 @@ async def test_request_to_join(client: AsyncClient, db_session: AsyncSession) ->
 
 
 async def test_request_to_join_already_in_org(
-    client: AsyncClient, db_session: AsyncSession,
+    client: AsyncClient,
+    db_session: AsyncSession,
 ) -> None:
     """User already in an org cannot request to join another."""
     org1, owner = await _create_org_with_owner(db_session, "Team 1", "owner@example.com")

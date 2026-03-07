@@ -154,7 +154,9 @@ async def request_to_join(org_id: str, auth: JwtAuth, db: DbSession) -> JoinRequ
     request = await orgs_dal.create_join_request(db, org_id, auth.user_id)
     logger.info(
         "Join request created request_id=%s org_id=%s user_id=%s",
-        request.id, org_id, auth.user_id,
+        request.id,
+        org_id,
+        auth.user_id,
     )
 
     return JoinRequestResponse(
@@ -211,7 +213,8 @@ async def resolve_join_request(
         await auth_dal.create_membership(db, auth.org_id, join_request.user_id, role="member")
         logger.info(
             "Join request accepted request_id=%s user_id=%s",
-            request_id, join_request.user_id,
+            request_id,
+            join_request.user_id,
         )
 
     return JoinRequestResponse(

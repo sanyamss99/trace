@@ -95,7 +95,7 @@ export function DashboardPage() {
 
       {/* Cost by function */}
       <div className="bg-surface-secondary border border-border rounded-lg p-5">
-        <h2 className="text-text-primary text-sm font-medium mb-4">Cost by Function</h2>
+        <h2 className="text-text-primary text-sm font-medium mb-4">Functions</h2>
         {costByFn.error ? (
           <ErrorMessage error={costByFn.error} onRetry={costByFn.refetch} />
         ) : costByFn.loading ? (

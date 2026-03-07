@@ -227,7 +227,7 @@ async def get_function_detail(
         val = durations[0]
         percentiles = LatencyPercentiles(p50=val, p90=val, p99=val)
     else:
-        qs = statistics.quantiles(durations, n=100)
+        qs = statistics.quantiles(durations, n=100, method="inclusive")
         percentiles = LatencyPercentiles(
             p50=round(qs[49], 2),
             p90=round(qs[89], 2),

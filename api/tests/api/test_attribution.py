@@ -295,16 +295,16 @@ def _make_span_with_prompt(**overrides: object) -> dict:
             "[system]\n"
             "You are a knowledgeable AI assistant. Answer the user's question using "
             "ONLY the provided context documents. Be precise and cite details.\n"
-            "<doc title=\"History\">"
+            '<doc title="History">'
             "The Transformer architecture was introduced in 2017 by researchers at "
-            "Google Brain in the paper \"Attention Is All You Need\" by Ashish Vaswani, "
+            'Google Brain in the paper "Attention Is All You Need" by Ashish Vaswani, '
             "Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan Gomez, "
             "Lukasz Kaiser, and Illia Polosukhin. It was presented at NeurIPS 2017. "
             "Prior to the Transformer, dominant models were recurrent neural networks "
             "like LSTMs and GRUs which processed tokens sequentially, creating a "
             "bottleneck where the hidden state had to carry all prior information."
             "</doc>\n"
-            "<doc title=\"Architecture\">"
+            '<doc title="Architecture">'
             "The Transformer follows an encoder-decoder structure using stacked "
             "self-attention and feed-forward layers. The encoder has N=6 identical "
             "layers with multi-head self-attention and position-wise feed-forward "
@@ -312,7 +312,7 @@ def _make_span_with_prompt(**overrides: object) -> dict:
             "each sub-layer. The decoder adds a third sub-layer for cross-attention "
             "over the encoder output."
             "</doc>\n"
-            "<doc title=\"Attention\">"
+            '<doc title="Attention">'
             "The core innovation is scaled dot-product attention: "
             "Attention(Q,K,V) = softmax(QK^T / sqrt(d_k)) V. The scaling factor "
             "1/sqrt(d_k) prevents dot products from growing too large. Multi-head "
@@ -320,7 +320,7 @@ def _make_span_with_prompt(**overrides: object) -> dict:
             "concatenates results, allowing the model to attend to different "
             "representation subspaces simultaneously."
             "</doc>\n"
-            "<doc title=\"Impact\">"
+            '<doc title="Impact">'
             "BERT (2018) used the encoder for masked language modeling. The GPT "
             "family from OpenAI uses the decoder trained autoregressively. GPT-3 "
             "with 175 billion parameters showed few-shot learning. Beyond text, "

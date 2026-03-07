@@ -30,8 +30,7 @@ class Settings(BaseSettings):
         """Reject the default JWT secret in production."""
         if not self.is_debug and self.jwt_secret == "change-me-in-production":
             raise ValueError(
-                "JWT_SECRET must be set to a secure value in production "
-                "(LOG_LEVEL != DEBUG)"
+                "JWT_SECRET must be set to a secure value in production (LOG_LEVEL != DEBUG)"
             )
         return self
 

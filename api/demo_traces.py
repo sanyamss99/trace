@@ -31,7 +31,7 @@ API_BASE = "http://localhost:8000"
 
 CHUNK_1_HISTORY = (
     "The Transformer architecture was introduced in 2017 by researchers at Google Brain "
-    "and Google Research in the landmark paper \"Attention Is All You Need\" authored by "
+    'and Google Research in the landmark paper "Attention Is All You Need" authored by '
     "Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. "
     "Gomez, Lukasz Kaiser, and Illia Polosukhin. The paper was presented at the 31st "
     "Conference on Neural Information Processing Systems (NeurIPS 2017). Prior to the "
@@ -124,11 +124,11 @@ def _demo_trace_1() -> list[dict]:
         "learning architectures. Answer the user's question using ONLY the provided context "
         "documents. Cite specific details from the documents. If the context does not contain "
         "enough information, say so explicitly. Be precise and technical.\n"
-        f"<doc title=\"History and Origins\">{CHUNK_1_HISTORY}</doc>\n"
-        f"<doc title=\"Architecture Overview\">{CHUNK_2_ARCHITECTURE}</doc>\n"
-        f"<doc title=\"Attention Mechanism\">{CHUNK_3_ATTENTION}</doc>\n"
-        f"<doc title=\"Positional Encoding\">{CHUNK_4_POSITIONAL}</doc>\n"
-        f"<doc title=\"Impact and Successors\">{CHUNK_5_IMPACT}</doc>\n\n"
+        f'<doc title="History and Origins">{CHUNK_1_HISTORY}</doc>\n'
+        f'<doc title="Architecture Overview">{CHUNK_2_ARCHITECTURE}</doc>\n'
+        f'<doc title="Attention Mechanism">{CHUNK_3_ATTENTION}</doc>\n'
+        f'<doc title="Positional Encoding">{CHUNK_4_POSITIONAL}</doc>\n'
+        f'<doc title="Impact and Successors">{CHUNK_5_IMPACT}</doc>\n\n'
         "[user]\n"
         "How does the attention mechanism work in Transformers? Explain the math behind "
         "scaled dot-product attention and why multi-head attention is used."
@@ -396,18 +396,18 @@ def _demo_trace_2() -> list[dict]:
         "learning architectures. Answer the user's question using ONLY the provided context "
         "documents. Cite specific details from the documents. If the context does not contain "
         "enough information, say so explicitly. Be precise and technical.\n"
-        f"<doc title=\"History and Origins\">{CHUNK_1_HISTORY}</doc>\n"
-        f"<doc title=\"Architecture Overview\">{CHUNK_2_ARCHITECTURE}</doc>\n"
-        f"<doc title=\"Attention Mechanism\">{CHUNK_3_ATTENTION}</doc>\n"
-        f"<doc title=\"Positional Encoding\">{CHUNK_4_POSITIONAL}</doc>\n"
-        f"<doc title=\"Impact and Successors\">{CHUNK_5_IMPACT}</doc>\n\n"
+        f'<doc title="History and Origins">{CHUNK_1_HISTORY}</doc>\n'
+        f'<doc title="Architecture Overview">{CHUNK_2_ARCHITECTURE}</doc>\n'
+        f'<doc title="Attention Mechanism">{CHUNK_3_ATTENTION}</doc>\n'
+        f'<doc title="Positional Encoding">{CHUNK_4_POSITIONAL}</doc>\n'
+        f'<doc title="Impact and Successors">{CHUNK_5_IMPACT}</doc>\n\n'
         "[user]\n"
         "Who created the Transformer architecture and what problem were they trying to solve?"
     )
 
     completion = (
         "The Transformer was created by researchers at Google Brain and Google Research. The "
-        "eight authors of the 2017 paper \"Attention Is All You Need\" were Ashish Vaswani, "
+        'eight authors of the 2017 paper "Attention Is All You Need" were Ashish Vaswani, '
         "Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Lukasz "
         "Kaiser, and Illia Polosukhin. The paper was presented at NeurIPS 2017.\n\n"
         "The key problem they were solving was the fundamental bottleneck of recurrent neural "
@@ -441,13 +441,13 @@ def _demo_trace_2() -> list[dict]:
         {"token": " the", "logprob": -0.02},
         {"token": " 2017", "logprob": -0.18},
         {"token": " paper", "logprob": -0.06},
-        {"token": " \"", "logprob": -0.08},
+        {"token": ' "', "logprob": -0.08},
         {"token": "Attention", "logprob": -0.10},
         {"token": " Is", "logprob": -0.05},
         {"token": " All", "logprob": -0.04},
         {"token": " You", "logprob": -0.03},
         {"token": " Need", "logprob": -0.04},
-        {"token": "\"", "logprob": -0.03},
+        {"token": '"', "logprob": -0.03},
         {"token": " were", "logprob": -0.06},
         {"token": " Ashish", "logprob": -0.75},
         {"token": " Vas", "logprob": -0.40},
@@ -643,11 +643,11 @@ def _demo_trace_3() -> list[dict]:
         "learning architectures. Answer the user's question using ONLY the provided context "
         "documents. Cite specific details from the documents. If the context does not contain "
         "enough information, say so explicitly. Be precise and technical.\n"
-        f"<doc title=\"History and Origins\">{CHUNK_1_HISTORY}</doc>\n"
-        f"<doc title=\"Architecture Overview\">{CHUNK_2_ARCHITECTURE}</doc>\n"
-        f"<doc title=\"Attention Mechanism\">{CHUNK_3_ATTENTION}</doc>\n"
-        f"<doc title=\"Positional Encoding\">{CHUNK_4_POSITIONAL}</doc>\n"
-        f"<doc title=\"Impact and Successors\">{CHUNK_5_IMPACT}</doc>\n\n"
+        f'<doc title="History and Origins">{CHUNK_1_HISTORY}</doc>\n'
+        f'<doc title="Architecture Overview">{CHUNK_2_ARCHITECTURE}</doc>\n'
+        f'<doc title="Attention Mechanism">{CHUNK_3_ATTENTION}</doc>\n'
+        f'<doc title="Positional Encoding">{CHUNK_4_POSITIONAL}</doc>\n'
+        f'<doc title="Impact and Successors">{CHUNK_5_IMPACT}</doc>\n\n'
         "[user]\n"
         "What impact has the Transformer had beyond NLP? Give specific examples of non-text "
         "applications."

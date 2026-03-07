@@ -29,18 +29,14 @@ async def get_org_by_id(db: AsyncSession, org_id: str) -> Organization | None:
 
 async def get_user_membership(db: AsyncSession, user_id: str) -> OrgMember | None:
     """Find a user's single org membership."""
-    result = await db.execute(
-        select(OrgMember).where(OrgMember.user_id == user_id)
-    )
+    result = await db.execute(select(OrgMember).where(OrgMember.user_id == user_id))
     return result.scalar_one_or_none()
 
 
 async def get_org_members(db: AsyncSession, org_id: str) -> list[OrgMember]:
     """List all members of an organization with eagerly loaded User."""
     result = await db.execute(
-        select(OrgMember)
-        .options(joinedload(OrgMember.user))
-        .where(OrgMember.org_id == org_id)
+        select(OrgMember).options(joinedload(OrgMember.user)).where(OrgMember.org_id == org_id)
     )
     return list(result.scalars().all())
 
@@ -78,9 +74,7 @@ async def remove_member(db: AsyncSession, org_id: str, user_id: str) -> bool:
     return False
 
 
-async def create_join_request(
-    db: AsyncSession, org_id: str, user_id: str
-) -> JoinRequest:
+async def create_join_request(db: AsyncSession, org_id: str, user_id: str) -> JoinRequest:
     """Create a pending join request."""
     request = JoinRequest(org_id=org_id, user_id=user_id, status="pending")
     db.add(request)
@@ -88,9 +82,7 @@ async def create_join_request(
     return request
 
 
-async def get_pending_join_requests(
-    db: AsyncSession, org_id: str
-) -> list[JoinRequest]:
+async def get_pending_join_requests(db: AsyncSession, org_id: str) -> list[JoinRequest]:
     """List pending join requests for an org with eagerly loaded User."""
     result = await db.execute(
         select(JoinRequest)
@@ -114,9 +106,7 @@ async def get_pending_request_for_user(
     return result.scalar_one_or_none()
 
 
-async def get_join_request_by_id(
-    db: AsyncSession, request_id: str
-) -> JoinRequest | None:
+async def get_join_request_by_id(db: AsyncSession, request_id: str) -> JoinRequest | None:
     """Fetch a join request by ID with eagerly loaded User."""
     result = await db.execute(
         select(JoinRequest)
@@ -133,9 +123,7 @@ async def resolve_join_request(
     resolved_by: str,
 ) -> JoinRequest | None:
     """Update a join request's status to accepted or declined."""
-    result = await db.execute(
-        select(JoinRequest).where(JoinRequest.id == request_id)
-    )
+    result = await db.execute(select(JoinRequest).where(JoinRequest.id == request_id))
     request = result.scalar_one_or_none()
     if request:
         request.status = status

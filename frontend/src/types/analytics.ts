@@ -33,3 +33,15 @@ export interface ModelCostItem {
   avg_cost_usd: number | null;
   avg_quality_score: number | null;
 }
+
+export interface LatencyPercentiles {
+  p50: number | null;
+  p90: number | null;
+  p99: number | null;
+}
+
+export interface FunctionDetail {
+  function_name: string;
+  percentiles: LatencyPercentiles;
+  recent_statuses: string[];
+}

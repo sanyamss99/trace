@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import clsx from 'clsx';
 import { useTraces } from '../hooks/useTraces';
+import { useCostByFunction } from '../hooks/useCostByFunction';
 import { StatusBadge } from '../components/StatusBadge';
 import { Pagination } from '../components/Pagination';
 import { DateRangeFilter, type DateRange } from '../components/DateRangeFilter';
@@ -9,6 +10,84 @@ import { LoadingSpinner } from '../components/LoadingSpinner';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { EmptyState } from '../components/EmptyState';
 import { formatCost, formatDuration, formatTokens, formatRelativeDate, formatDate } from '../utils/formatters';
+import type { FunctionCostItem } from '../types/analytics';
+
+function FunctionSummaryCards({ item }: { item: FunctionCostItem }) {
+  const successRate = item.call_count > 0
+    ? ((item.call_count - item.error_count) / item.call_count * 100).toFixed(1)
+    : '100.0';
+  const successCount = item.call_count - item.error_count;
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      {/* Cost */}
+      <div className="bg-surface-secondary border border-border rounded-lg p-5">
+        <h3 className="text-sm font-medium text-text-primary">Cost</h3>
+        <p className="text-xs text-text-muted mb-3">Average per call</p>
+        <div className="flex items-baseline gap-2">
+          <span className="font-mono text-2xl font-semibold text-text-primary">
+            {formatCost(item.avg_cost_usd)}
+          </span>
+          <span className="text-xs text-text-muted">/call</span>
+        </div>
+        <div className="mt-3 text-xs text-text-secondary space-y-1">
+          <div className="flex justify-between">
+            <span>Total cost</span>
+            <span className="font-mono">{formatCost(item.total_cost_usd)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Total tokens</span>
+            <span className="font-mono">{formatTokens(item.total_tokens)}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Reliability */}
+      <div className="bg-surface-secondary border border-border rounded-lg p-5">
+        <h3 className="text-sm font-medium text-text-primary">Reliability</h3>
+        <p className="text-xs text-text-muted mb-3">Success rate</p>
+        <div className="flex items-baseline gap-2">
+          <span className="font-mono text-2xl font-semibold text-green-400">
+            {successRate}%
+          </span>
+          <span className="text-xs text-text-muted">success</span>
+        </div>
+        <div className="mt-3 flex gap-0.5 h-2 rounded overflow-hidden">
+          {item.call_count > 0 && successCount > 0 && (
+            <div
+              className="bg-green-500 rounded-l"
+              style={{ width: `${(successCount / item.call_count) * 100}%` }}
+            />
+          )}
+          {item.error_count > 0 && (
+            <div
+              className="bg-error rounded-r"
+              style={{ width: `${(item.error_count / item.call_count) * 100}%` }}
+            />
+          )}
+        </div>
+        <div className="mt-2 text-xs text-text-secondary flex justify-between">
+          <span>{item.call_count} calls</span>
+          {item.error_count > 0 && (
+            <span className="text-error">{item.error_count} failures</span>
+          )}
+        </div>
+      </div>
+
+      {/* Latency */}
+      <div className="bg-surface-secondary border border-border rounded-lg p-5">
+        <h3 className="text-sm font-medium text-text-primary">Latency</h3>
+        <p className="text-xs text-text-muted mb-3">Average response time</p>
+        <div className="flex items-baseline gap-2">
+          <span className="font-mono text-2xl font-semibold text-text-primary">
+            {formatDuration(item.avg_duration_ms)}
+          </span>
+          <span className="text-xs text-text-muted">avg</span>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function TracesPage() {
   const navigate = useNavigate();
@@ -31,6 +110,19 @@ export function TracesPage() {
     else next.delete('started_before');
     setSearchParams(next);
   }, [searchParams, setSearchParams]);
+
+  const functionNameParam = searchParams.get('function_name');
+
+  const analyticsFilters = useMemo(() => ({
+    started_after: dateRange.started_after,
+    started_before: dateRange.started_before,
+  }), [dateRange.started_after, dateRange.started_before]);
+
+  const costByFn = useCostByFunction(analyticsFilters);
+  const functionItem = useMemo(() => {
+    if (!functionNameParam || costByFn.loading) return null;
+    return costByFn.data.find((f) => f.function_name === functionNameParam) ?? null;
+  }, [functionNameParam, costByFn.data, costByFn.loading]);
 
   const filters = useMemo(() => ({
     function_name: search || undefined,
@@ -59,6 +151,8 @@ export function TracesPage() {
   return (
     <div className="max-w-6xl">
       <h1 className="text-text-primary text-lg font-semibold mb-6">Traces</h1>
+
+      {functionItem && <FunctionSummaryCards item={functionItem} />}
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">

@@ -61,60 +61,89 @@ function AnimatedBackground() {
         }}
       />
 
-      {/* ── Aurora bands ── */}
-      <div
-        className="absolute -inset-x-1/2 top-[5%] h-[700px]"
-        style={{
-          background: `linear-gradient(90deg, transparent 0%, rgba(var(--raw-accent-rgb), 0.2) 10%, rgba(var(--raw-accent-rgb), 0.35) 30%, rgba(var(--raw-warning-rgb), 0.15) 50%, rgba(var(--raw-accent-rgb), 0.3) 70%, rgba(var(--raw-accent-rgb), 0.15) 90%, transparent 100%)`,
-          filter: 'blur(50px)',
-          animation: 'landing-aurora 18s ease-in-out infinite',
-        }}
-      />
-      <div
-        className="absolute -inset-x-1/2 top-[45%] h-[600px]"
-        style={{
-          background: `linear-gradient(90deg, transparent 0%, rgba(var(--raw-warning-rgb), 0.15) 15%, rgba(var(--raw-accent-rgb), 0.25) 40%, rgba(var(--raw-warning-rgb), 0.18) 65%, rgba(var(--raw-accent-rgb), 0.12) 85%, transparent 100%)`,
-          filter: 'blur(55px)',
-          animation: 'landing-aurora 24s ease-in-out infinite reverse',
-        }}
-      />
-      <div
-        className="absolute -inset-x-1/3 -top-[3%] h-[350px]"
-        style={{
-          background: `linear-gradient(100deg, transparent 0%, rgba(var(--raw-accent-rgb), 0.15) 35%, rgba(var(--raw-accent-rgb), 0.25) 55%, rgba(var(--raw-warning-rgb), 0.1) 75%, transparent 100%)`,
-          filter: 'blur(40px)',
-          animation: 'landing-aurora 14s ease-in-out infinite',
-          animationDelay: '-5s',
-        }}
-      />
-      <div
-        className="absolute -inset-x-1/2 bottom-[0%] h-[400px]"
-        style={{
-          background: `linear-gradient(90deg, transparent 0%, rgba(var(--raw-accent-rgb), 0.12) 30%, rgba(var(--raw-accent-rgb), 0.2) 50%, rgba(var(--raw-accent-rgb), 0.12) 70%, transparent 100%)`,
-          filter: 'blur(60px)',
-          animation: 'landing-aurora 20s ease-in-out infinite',
-          animationDelay: '-10s',
-        }}
-      />
+      {/* ── Aurora bands (hidden on mobile for performance) ── */}
+      <div className="hidden sm:block">
+        <div
+          className="absolute -inset-x-1/2 top-[5%] h-[700px]"
+          style={{
+            background: `linear-gradient(90deg, transparent 0%, rgba(var(--raw-accent-rgb), 0.2) 10%, rgba(var(--raw-accent-rgb), 0.35) 30%, rgba(var(--raw-warning-rgb), 0.15) 50%, rgba(var(--raw-accent-rgb), 0.3) 70%, rgba(var(--raw-accent-rgb), 0.15) 90%, transparent 100%)`,
+            filter: 'blur(50px)',
+            animation: 'landing-aurora 18s ease-in-out infinite',
+            willChange: 'transform',
+            transform: 'translateZ(0)',
+          }}
+        />
+        <div
+          className="absolute -inset-x-1/2 top-[45%] h-[600px]"
+          style={{
+            background: `linear-gradient(90deg, transparent 0%, rgba(var(--raw-warning-rgb), 0.15) 15%, rgba(var(--raw-accent-rgb), 0.25) 40%, rgba(var(--raw-warning-rgb), 0.18) 65%, rgba(var(--raw-accent-rgb), 0.12) 85%, transparent 100%)`,
+            filter: 'blur(55px)',
+            animation: 'landing-aurora 24s ease-in-out infinite reverse',
+            willChange: 'transform',
+            transform: 'translateZ(0)',
+          }}
+        />
+        <div
+          className="absolute -inset-x-1/3 -top-[3%] h-[350px]"
+          style={{
+            background: `linear-gradient(100deg, transparent 0%, rgba(var(--raw-accent-rgb), 0.15) 35%, rgba(var(--raw-accent-rgb), 0.25) 55%, rgba(var(--raw-warning-rgb), 0.1) 75%, transparent 100%)`,
+            filter: 'blur(40px)',
+            animation: 'landing-aurora 14s ease-in-out infinite',
+            animationDelay: '-5s',
+            willChange: 'transform',
+            transform: 'translateZ(0)',
+          }}
+        />
+        <div
+          className="absolute -inset-x-1/2 bottom-[0%] h-[400px]"
+          style={{
+            background: `linear-gradient(90deg, transparent 0%, rgba(var(--raw-accent-rgb), 0.12) 30%, rgba(var(--raw-accent-rgb), 0.2) 50%, rgba(var(--raw-accent-rgb), 0.12) 70%, transparent 100%)`,
+            filter: 'blur(60px)',
+            animation: 'landing-aurora 20s ease-in-out infinite',
+            animationDelay: '-10s',
+            willChange: 'transform',
+            transform: 'translateZ(0)',
+          }}
+        />
+      </div>
 
-      {/* ── Gradient orbs ── */}
-      <div className="absolute rounded-full" style={{ width: '1000px', height: '1000px', top: '-5%', left: '0%', background: 'radial-gradient(circle, rgba(var(--raw-accent-rgb), 0.3) 0%, rgba(var(--raw-accent-rgb), 0.1) 30%, transparent 60%)', animation: 'landing-orb-drift-1 20s ease-in-out infinite' }} />
-      <div className="absolute rounded-full" style={{ width: '800px', height: '800px', top: '30%', right: '-5%', background: 'radial-gradient(circle, rgba(var(--raw-warning-rgb), 0.2) 0%, rgba(var(--raw-warning-rgb), 0.06) 30%, transparent 60%)', animation: 'landing-orb-drift-2 26s ease-in-out infinite' }} />
-      <div className="absolute rounded-full" style={{ width: '900px', height: '900px', bottom: '0%', left: '25%', background: 'radial-gradient(circle, rgba(var(--raw-accent-rgb), 0.22) 0%, rgba(var(--raw-accent-rgb), 0.06) 30%, transparent 60%)', animation: 'landing-orb-drift-3 22s ease-in-out infinite' }} />
-      <div className="absolute rounded-full" style={{ width: '600px', height: '600px', top: '10%', right: '20%', background: 'radial-gradient(circle, rgba(var(--raw-accent-rgb), 0.35) 0%, rgba(var(--raw-accent-rgb), 0.12) 25%, transparent 50%)', animation: 'landing-orb-drift-2 16s ease-in-out infinite reverse' }} />
-      <div className="absolute rounded-full" style={{ width: '450px', height: '450px', top: '55%', left: '8%', background: 'radial-gradient(circle, rgba(var(--raw-warning-rgb), 0.18) 0%, rgba(var(--raw-warning-rgb), 0.05) 30%, transparent 55%)', animation: 'landing-orb-drift-1 12s ease-in-out infinite reverse' }} />
-      <div className="absolute rounded-full" style={{ width: '500px', height: '500px', top: '75%', right: '15%', background: 'radial-gradient(circle, rgba(var(--raw-accent-rgb), 0.18) 0%, rgba(var(--raw-accent-rgb), 0.05) 30%, transparent 55%)', animation: 'landing-orb-drift-3 15s ease-in-out infinite reverse' }} />
+      {/* ── Mobile-friendly aurora (single, lighter, no GPU layer promotion) ── */}
+      <div className="block sm:hidden">
+        <div
+          className="absolute -inset-x-1/4 top-[10%] h-[400px]"
+          style={{
+            background: `linear-gradient(90deg, transparent 0%, rgba(var(--raw-accent-rgb), 0.15) 30%, rgba(var(--raw-accent-rgb), 0.2) 50%, rgba(var(--raw-accent-rgb), 0.15) 70%, transparent 100%)`,
+            filter: 'blur(40px)',
+          }}
+        />
+      </div>
 
-      {/* ── Grid ── */}
+      {/* ── Gradient orbs (fewer + smaller on mobile) ── */}
+      <div className="hidden sm:block">
+        <div className="absolute rounded-full" style={{ width: '1000px', height: '1000px', top: '-5%', left: '0%', background: 'radial-gradient(circle, rgba(var(--raw-accent-rgb), 0.3) 0%, rgba(var(--raw-accent-rgb), 0.1) 30%, transparent 60%)', animation: 'landing-orb-drift-1 20s ease-in-out infinite', willChange: 'transform' }} />
+        <div className="absolute rounded-full" style={{ width: '800px', height: '800px', top: '30%', right: '-5%', background: 'radial-gradient(circle, rgba(var(--raw-warning-rgb), 0.2) 0%, rgba(var(--raw-warning-rgb), 0.06) 30%, transparent 60%)', animation: 'landing-orb-drift-2 26s ease-in-out infinite', willChange: 'transform' }} />
+        <div className="absolute rounded-full" style={{ width: '900px', height: '900px', bottom: '0%', left: '25%', background: 'radial-gradient(circle, rgba(var(--raw-accent-rgb), 0.22) 0%, rgba(var(--raw-accent-rgb), 0.06) 30%, transparent 60%)', animation: 'landing-orb-drift-3 22s ease-in-out infinite', willChange: 'transform' }} />
+        <div className="absolute rounded-full" style={{ width: '600px', height: '600px', top: '10%', right: '20%', background: 'radial-gradient(circle, rgba(var(--raw-accent-rgb), 0.35) 0%, rgba(var(--raw-accent-rgb), 0.12) 25%, transparent 50%)', animation: 'landing-orb-drift-2 16s ease-in-out infinite reverse' }} />
+        <div className="absolute rounded-full" style={{ width: '450px', height: '450px', top: '55%', left: '8%', background: 'radial-gradient(circle, rgba(var(--raw-warning-rgb), 0.18) 0%, rgba(var(--raw-warning-rgb), 0.05) 30%, transparent 55%)', animation: 'landing-orb-drift-1 12s ease-in-out infinite reverse' }} />
+        <div className="absolute rounded-full" style={{ width: '500px', height: '500px', top: '75%', right: '15%', background: 'radial-gradient(circle, rgba(var(--raw-accent-rgb), 0.18) 0%, rgba(var(--raw-accent-rgb), 0.05) 30%, transparent 55%)', animation: 'landing-orb-drift-3 15s ease-in-out infinite reverse' }} />
+      </div>
+
+      {/* ── Mobile orbs (2 static, no animation) ── */}
+      <div className="block sm:hidden">
+        <div className="absolute rounded-full" style={{ width: '400px', height: '400px', top: '-5%', left: '-10%', background: 'radial-gradient(circle, rgba(var(--raw-accent-rgb), 0.2) 0%, transparent 60%)' }} />
+        <div className="absolute rounded-full" style={{ width: '350px', height: '350px', bottom: '10%', right: '-10%', background: 'radial-gradient(circle, rgba(var(--raw-accent-rgb), 0.15) 0%, transparent 60%)' }} />
+      </div>
+
+      {/* ── Grid (desktop only) ── */}
       <div
-        className="absolute inset-0"
+        className="absolute inset-0 hidden sm:block"
         style={{
           backgroundImage: `linear-gradient(rgba(var(--raw-accent-rgb), 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(var(--raw-accent-rgb), 0.05) 1px, transparent 1px)`,
           backgroundSize: '64px 64px',
         }}
       />
       <div
-        className="absolute inset-0"
+        className="absolute inset-0 hidden sm:block"
         style={{
           backgroundImage: 'radial-gradient(circle, rgba(var(--raw-accent-rgb), 0.18) 1px, transparent 1px)',
           backgroundSize: '64px 64px',
@@ -134,7 +163,7 @@ function AnimatedBackground() {
 
 function EditorWindow({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-surface-secondary/80 backdrop-blur-md border border-border rounded-lg overflow-hidden shadow-lg">
+    <div className="bg-surface-secondary border sm:bg-surface-secondary/80 sm:backdrop-blur-md border-border rounded-lg overflow-hidden shadow-lg">
       <div className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 border-b border-border">
         <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-red-500/70" />
         <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-yellow-500/70" />
@@ -209,12 +238,23 @@ function HeroCode() {
   const totalChars = CODE_LINES.reduce((sum, l) => sum + l.text.length + 1, 0);
 
   useEffect(() => {
-    if (charCount >= totalChars) return;
-    const timer = setInterval(() => {
-      setCharCount((c) => Math.min(c + 1, totalChars));
-    }, 30);
-    return () => clearInterval(timer);
-  }, [charCount, totalChars]);
+    let raf: number;
+    let prev = performance.now();
+    let count = 0;
+
+    function step(now: number) {
+      if (now - prev >= 30) {
+        count = Math.min(count + 1, totalChars);
+        setCharCount(count);
+        prev = now;
+        if (count >= totalChars) return;
+      }
+      raf = requestAnimationFrame(step);
+    }
+
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [totalChars]);
 
   let remaining = charCount;
   const visibleLines: { text: string; color: string }[] = [];
@@ -353,27 +393,27 @@ function HeroSection() {
           style={{ animation: 'landing-logo-entrance 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards' }}
         >
         <div className="relative flex items-center justify-center w-14 h-14">
-          {/* Outer glow ring */}
+          {/* Outer glow ring (desktop only) */}
           <div
-            className="absolute inset-0 rounded-full"
+            className="absolute inset-0 rounded-full hidden sm:block"
             style={{
               background: 'radial-gradient(circle, rgba(var(--raw-accent-rgb), 0.2) 0%, transparent 70%)',
               animation: 'landing-diamond-glow 3s ease-in-out infinite',
             }}
           />
-          {/* Pulsing ring 1 */}
+          {/* Pulsing ring 1 (desktop only) */}
           <div
-            className="absolute inset-0 rounded-full border border-accent/30"
+            className="absolute inset-0 rounded-full border border-accent/30 hidden sm:block"
             style={{ animation: 'landing-ring-expand 3s ease-out infinite' }}
           />
-          {/* Pulsing ring 2 — offset */}
+          {/* Pulsing ring 2 — offset (desktop only) */}
           <div
-            className="absolute inset-0 rounded-full border border-accent/20"
+            className="absolute inset-0 rounded-full border border-accent/20 hidden sm:block"
             style={{ animation: 'landing-ring-expand 3s ease-out infinite 1.5s' }}
           />
-          {/* Slow rotating border */}
+          {/* Slow rotating border (desktop only) */}
           <div
-            className="absolute -inset-1 rounded-full"
+            className="absolute -inset-1 rounded-full hidden sm:block"
             style={{
               background: `conic-gradient(from 0deg, transparent 0%, rgba(var(--raw-accent-rgb), 0.3) 25%, transparent 50%, rgba(var(--raw-accent-rgb), 0.2) 75%, transparent 100%)`,
               animation: 'landing-rotate-slow 8s linear infinite',
@@ -427,8 +467,7 @@ function HeroSection() {
       </div>
 
       <div
-        className="relative z-10 w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 mb-10 sm:mb-16"
-        style={{ animation: 'landing-float 8s ease-in-out infinite' }}
+        className="landing-hero-float relative z-10 w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 mb-10 sm:mb-16"
       >
         <HeroCode />
         <HeroTrace />
@@ -465,10 +504,9 @@ function TextReveal({ text, delayOffset = 0 }: { text: string; delayOffset?: num
       {text.split('').map((char, i) => (
         <span
           key={i}
-          className="inline-block transition-all duration-500"
+          className="inline-block transition-opacity duration-500"
           style={{
             opacity: inView ? 1 : 0,
-            filter: inView ? 'blur(0px)' : 'blur(4px)',
             transitionDelay: `${delayOffset + i * 15}ms`,
           }}
         >
@@ -484,7 +522,7 @@ function PainPointCard({ point, index }: { point: { question: string; detail: st
   return (
     <div
       ref={ref}
-      className="bg-surface-secondary/60 backdrop-blur-sm border border-border rounded-xl p-5 sm:p-8 transition-all duration-700 ease-out"
+      className="bg-surface-secondary sm:bg-surface-secondary/60 sm:backdrop-blur-sm border border-border rounded-xl p-5 sm:p-8 transition-[opacity,transform] duration-700 ease-out"
       style={{
         opacity: inView ? 1 : 0,
         transform: inView ? 'translateY(0)' : 'translateY(20px)',
@@ -563,7 +601,7 @@ function ProblemSection() {
             transitionDuration: '1200ms',
           }}
         >
-          <div className="bg-surface-secondary/80 backdrop-blur-md border border-border rounded-lg p-4 sm:p-6 text-left space-y-2 shadow-lg">
+          <div className="bg-surface-secondary border sm:bg-surface-secondary/80 sm:backdrop-blur-md border-border rounded-lg p-4 sm:p-6 text-left space-y-2 shadow-lg">
             {REVEAL_SPANS.map((span) => (
               <div key={span.name} className="flex items-center gap-2 sm:gap-3">
                 <div
@@ -877,7 +915,7 @@ function FeatureCard({
   return (
     <div
       ref={ref}
-      className="bg-surface-secondary/70 backdrop-blur-md border border-border rounded-xl p-6 transition-all duration-700 ease-out shadow-lg hover:shadow-xl hover:border-border-focus"
+      className="bg-surface-secondary border sm:bg-surface-secondary/70 sm:backdrop-blur-md border-border rounded-xl p-6 transition-[opacity,transform,box-shadow,border-color] duration-700 ease-out shadow-lg hover:shadow-xl hover:border-border-focus"
       style={{
         opacity: inView ? 1 : 0,
         transform: inView ? 'translateY(0)' : 'translateY(32px)',
@@ -989,7 +1027,7 @@ function StepBlock({ step, index }: { step: (typeof STEPS)[number]; index: numbe
   return (
     <div
       ref={ref}
-      className="transition-all duration-700 ease-out"
+      className="transition-[opacity,transform] duration-700 ease-out"
       style={{
         opacity: inView ? 1 : 0,
         transform: inView ? 'translateY(0)' : 'translateY(24px)',
@@ -1081,25 +1119,11 @@ function CTASection() {
   );
 }
 
-// ─── Inline keyframes ─────────────────────────────────────────────
-
-const inlineStyles = `
-@keyframes fadeSlideIn {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-`;
-
 // ─── Page ─────────────────────────────────────────────────────────
 
 export function LandingPage() {
   return (
     <div className="min-h-screen bg-surface-primary text-text-primary">
-      <style>{inlineStyles}</style>
       <AnimatedBackground />
       <div className="relative" style={{ zIndex: 1 }}>
         <HeroSection />

@@ -28,6 +28,8 @@ You don't know. You're guessing.
 
 ## How It Works
 
+![How Trace Works](assets/trace-works.png)
+
 ## Quick Start
 
 ### Install

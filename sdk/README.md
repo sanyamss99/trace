@@ -11,16 +11,44 @@ pip install usetrace
 ## Quick Start
 
 ```python
+import openai
 from usetrace import Trace
 
-tracer = Trace(api_key="your-key", base_url="https://api.use-trace.com")
+tracer = Trace(api_key="tr-...", base_url="https://api.use-trace.com")
+client = openai.OpenAI()
+
+
+@tracer.observe(span_type="retrieval", tags={"source": "pinecone"})
+def retrieve_context(query: str) -> str:
+    """Fetch relevant documents for the query."""
+    results = pinecone_index.query(vector=embed(query), top_k=5)
+    return "\n".join(match.metadata["text"] for match in results.matches)
+
 
 @tracer.observe(span_type="llm", model="gpt-4o")
-def my_llm_function(prompt: str) -> str:
-    return openai.chat.completions.create(...)
+def generate_answer(question: str, context: str) -> str:
+    """Call the LLM with retrieved context."""
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {"role": "system", "content": f"Answer using this context:\n{context}"},
+            {"role": "user", "content": question},
+        ],
+    )
+    return response.choices[0].message.content
+
+
+@tracer.observe(span_type="chain", tags={"pattern": "rag"})
+def rag_pipeline(question: str) -> str:
+    """Full RAG pipeline — retrieve then generate."""
+    context = retrieve_context(question)
+    return generate_answer(question, context)
+
+
+answer = rag_pipeline("How does attention work in Transformers?")
 ```
 
-Every traced call is captured — inputs, outputs, latency, token usage — and sent to the Trace dashboard where you can inspect full execution trees and per-token attribution maps.
+Every traced call is captured — inputs, outputs, latency, token usage — and sent to the Trace dashboard where you can inspect the full execution tree and per-token attribution maps. The example above produces a three-level trace: `rag_pipeline` → `retrieve_context` + `generate_answer`.
 
 ## Configuration
 
